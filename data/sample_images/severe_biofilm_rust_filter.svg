@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="glassGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.2)"/>
+      <stop offset="25%" stop-color="rgba(239,68,68,0.15)"/>
+      <stop offset="75%" stop-color="rgba(153,27,27,0.25)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0.2)"/>
+    </linearGradient>
+    <linearGradient id="heavyRustBiofilm" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#450a0a"/>
+      <stop offset="20%" stop-color="#7f1d1d"/>
+      <stop offset="50%" stop-color="#991b1b"/>
+      <stop offset="75%" stop-color="#3f2e18"/>
+      <stop offset="100%" stop-color="#1c1917"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <rect width="400" height="600" fill="url(#bgGrad)"/>
+  
+  <path d="M 40 80 L 360 80" stroke="#334155" stroke-width="4"/>
+  <rect x="180" y="20" width="40" height="60" fill="#64748b"/>
+  <circle cx="200" cy="50" r="14" fill="#ef4444"/>
+  <text x="200" y="54" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle" font-weight="bold">INLET</text>
+
+  <path d="M 130 90 L 270 90 L 255 140 L 145 140 Z" fill="#991b1b" filter="url(#shadow)"/>
+  <rect x="175" y="100" width="50" height="25" rx="4" fill="#7f1d1d"/>
+  <text x="200" y="117" fill="#fecaca" font-family="sans-serif" font-size="12" text-anchor="middle" font-weight="bold">AquaVigil Sentry</text>
+  <text x="200" y="132" fill="#f87171" font-family="sans-serif" font-size="9" text-anchor="middle">10" SEDIMENT PRE-FILTER</text>
+
+  <!-- Transparent Canister Body -->
+  <rect x="140" y="140" width="120" height="380" rx="12" fill="url(#glassGrad)" stroke="#ef4444" stroke-width="2.5" filter="url(#shadow)"/>
+  <rect x="142" y="145" width="116" height="370" rx="10" fill="#7f1d1d" fill-opacity="0.3"/>
+
+  <!-- Severely Fouled Core (Iron Oxide Rust + Microbial Biofilm) -->
+  <rect x="160" y="155" width="80" height="350" rx="6" fill="url(#heavyRustBiofilm)" stroke="#450a0a" stroke-width="1.5"/>
+
+  <!-- Organic Biofilm Encrustation & Rust Streaking -->
+  <path d="M 160 170 Q 185 185 200 175 T 240 180 L 240 220 Q 210 235 180 215 Z" fill="#292524" fill-opacity="0.8"/>
+  <path d="M 160 230 Q 195 240 215 255 T 240 245 L 240 310 Q 190 320 160 290 Z" fill="#1c1917" fill-opacity="0.85"/>
+  <circle cx="185" cy="280" r="14" fill="#3f2e18" fill-opacity="0.9"/>
+  <circle cx="215" cy="335" r="18" fill="#1c1917" fill-opacity="0.8"/>
+  <path d="M 160 340 Q 200 370 240 350 L 240 440 Q 195 460 160 430 Z" fill="#450a0a" fill-opacity="0.9"/>
+  <ellipse cx="200" cy="460" rx="38" ry="20" fill="#1c1917" fill-opacity="0.9"/>
+
+  <!-- Discolored murky water chamber -->
+  <rect x="142" y="320" width="18" height="190" fill="#b91c1c" fill-opacity="0.4"/>
+  <rect x="240" y="320" width="18" height="190" fill="#b91c1c" fill-opacity="0.4"/>
+
+  <!-- Bottom Sump with Dense Sediment Pack -->
+  <path d="M 145 480 L 255 480 L 245 520 L 155 520 Z" fill="#1c1917"/>
+  <path d="M 155 520 L 245 520 L 235 550 L 165 550 Z" fill="#7f1d1d"/>
+
+  <!-- Glass Light Reflection -->
+  <path d="M 148 150 L 152 150 L 152 510 L 148 510 Z" fill="#ffffff" fill-opacity="0.2"/>
+
+  <!-- Status Overlay Badge -->
+  <rect x="50" y="540" width="300" height="42" rx="8" fill="#450a0a" stroke="#ef4444" stroke-width="1.5"/>
+  <circle cx="75" cy="561" r="8" fill="#ef4444"/>
+  <text x="95" y="556" fill="#fca5a5" font-family="sans-serif" font-size="11" font-weight="bold">SAMPLE C: SEVERE BIOFILM &amp; RUST (MIN 3 DEMO)</text>
+  <text x="95" y="572" fill="#fee2e2" font-family="sans-serif" font-size="10">Visual Fouling Index: 0.84 | Severity: ELEVATED | Biofilm Ingress Alert</text>
+</svg>

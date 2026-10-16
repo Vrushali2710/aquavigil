@@ -1,0 +1,234 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "sector_id": "SECTOR_04_SOUTH",
+    "name": "Old Town Subsurface Corridor - Sector 4",
+    "coordinate_reference": "WGS84",
+    "center": [12.9716, 77.5946],
+    "zoom": 17,
+    "last_survey_date": "2026-09-15"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "WTR-PIPE-4011",
+      "properties": {
+        "asset_type": "water_main",
+        "pipe_id": "WTR-PIPE-4011",
+        "valve_id": "VLV-SEC4-WEST-02",
+        "diameter_mm": 300,
+        "material": "CAST_IRON_UNLINED",
+        "installation_decade": "1980s",
+        "pipe_age_years": 42,
+        "structural_condition": "POOR",
+        "current_status": "PRESSURIZED",
+        "residual_pressure_bar": 2.8,
+        "elevation_m": 918.4,
+        "length_m": 180.5,
+        "street": "Pine Avenue Corridor"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [77.5925, 12.9712],
+          [77.5932, 12.9715],
+          [77.5941, 12.9719],
+          [77.5950, 12.9723]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "WTR-PIPE-4012",
+      "properties": {
+        "asset_type": "water_main",
+        "pipe_id": "WTR-PIPE-4012",
+        "valve_id": "VLV-SEC4-WEST-02",
+        "diameter_mm": 250,
+        "material": "CAST_IRON_UNLINED",
+        "installation_decade": "1980s",
+        "pipe_age_years": 40,
+        "structural_condition": "FAIR",
+        "current_status": "PRESSURIZED",
+        "residual_pressure_bar": 2.7,
+        "elevation_m": 916.1,
+        "length_m": 145.0,
+        "street": "Elm Way Junction"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [77.5950, 12.9723],
+          [77.5958, 12.9726],
+          [77.5966, 12.9730]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "WTR-PIPE-4013",
+      "properties": {
+        "asset_type": "water_main",
+        "pipe_id": "WTR-PIPE-4013",
+        "valve_id": "VLV-SEC4-NORTH-01",
+        "diameter_mm": 350,
+        "material": "DUCTILE_IRON",
+        "installation_decade": "2010s",
+        "pipe_age_years": 14,
+        "structural_condition": "GOOD",
+        "current_status": "PRESSURIZED",
+        "residual_pressure_bar": 3.4,
+        "elevation_m": 921.0,
+        "length_m": 210.0,
+        "street": "North Cross Link"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [77.5925, 12.9735],
+          [77.5938, 12.9738],
+          [77.5955, 12.9742]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SWR-PIPE-802",
+      "properties": {
+        "asset_type": "gravity_sewer",
+        "sewer_id": "SWR-PIPE-802",
+        "diameter_mm": 450,
+        "material": "VITRIFIED_CLAY",
+        "installation_year": 1974,
+        "condition_rating": 4.4,
+        "exfiltration_risk": "VERY_HIGH",
+        "joint_integrity": "COMPROMISED",
+        "depth_m": 2.8,
+        "street": "Pine Avenue Shared Easement"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [77.59248, 12.97123],
+          [77.59318, 12.97153],
+          [77.59407, 12.97193],
+          [77.59498, 12.97233]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SWR-PIPE-805",
+      "properties": {
+        "asset_type": "gravity_sewer",
+        "sewer_id": "SWR-PIPE-805",
+        "diameter_mm": 400,
+        "material": "REINFORCED_CONCRETE",
+        "installation_year": 1982,
+        "condition_rating": 3.7,
+        "exfiltration_risk": "MODERATE_HIGH",
+        "joint_integrity": "ROOT_INTRUSION",
+        "depth_m": 3.1,
+        "street": "Elm Way Easement"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [77.59496, 12.97234],
+          [77.59575, 12.97265],
+          [77.59655, 12.97306]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "VLV-SEC4-WEST-02",
+      "properties": {
+        "asset_type": "scada_valve",
+        "valve_id": "VLV-SEC4-WEST-02",
+        "type": "ISOLATION_GATE_VALVE",
+        "status": "OPEN",
+        "actuator_state": "OPEN",
+        "controlled_pipes": ["WTR-PIPE-4011", "WTR-PIPE-4012"],
+        "sector_id": "SECTOR_04_SOUTH",
+        "telemetry_link": "SCADA_RTU_719"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [77.5925, 12.9712]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "VLV-SEC4-NORTH-01",
+      "properties": {
+        "asset_type": "scada_valve",
+        "valve_id": "VLV-SEC4-NORTH-01",
+        "type": "ISOLATION_GATE_VALVE",
+        "status": "OPEN",
+        "actuator_state": "OPEN",
+        "controlled_pipes": ["WTR-PIPE-4013"],
+        "sector_id": "SECTOR_04_NORTH",
+        "telemetry_link": "SCADA_RTU_720"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [77.5925, 12.9735]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "HOUSE-PIN-01",
+      "properties": {
+        "asset_type": "household_endpoint",
+        "address": "104 Pine Avenue, Apt 2B",
+        "resident_name": "Dr. Sarah Jenkins",
+        "connected_pipe_id": "WTR-PIPE-4011",
+        "sector_id": "SECTOR_04_SOUTH",
+        "purifier_type": "3-Stage RO + Transparent Pre-Filter",
+        "last_filter_change": "8 months ago",
+        "filter_status": "PENDING_INSPECTION"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [77.5936, 12.9718]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "HOUSE-PIN-02",
+      "properties": {
+        "asset_type": "household_endpoint",
+        "address": "118 Pine Avenue, Unit 1",
+        "resident_name": "Marcus Vance",
+        "connected_pipe_id": "WTR-PIPE-4011",
+        "sector_id": "SECTOR_04_SOUTH",
+        "purifier_type": "Under-sink Spun Polypropylene Sediment Filter",
+        "last_filter_change": "11 months ago",
+        "filter_status": "PENDING_INSPECTION"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [77.5944, 12.9721]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "HOUSE-ELM-03",
+      "properties": {
+        "asset_type": "household_endpoint",
+        "address": "205 Elm Way",
+        "resident_name": "Priya Sharma",
+        "connected_pipe_id": "WTR-PIPE-4012",
+        "sector_id": "SECTOR_04_SOUTH",
+        "purifier_type": "Transparent Sediment Pre-Cartridge",
+        "last_filter_change": "2 months ago",
+        "filter_status": "NORMAL"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [77.5961, 12.9728]
+      }
+    }
+  ]
+}
