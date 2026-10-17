@@ -6,3 +6,7 @@ __pycache__
 .git
 .gitignore
 .vscode
+credentials.json
+gcp_credentials.json
+service_account.json
+key.json

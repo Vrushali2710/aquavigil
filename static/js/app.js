@@ -263,42 +263,46 @@ async function runBigQueryGisTriage() {
     const data = await res.json();
     lastGisResults = data;
 
-    // Latency
     const latEl = document.getElementById('metric-latency');
-    if (latEl) latEl.textContent = data.execution_latency_ms;
+    if (latEl) {
+      const latency = data && typeof data.execution_latency_ms !== 'undefined' ? data.execution_latency_ms : 'n/a';
+      latEl.textContent = `${latency} ms`;
+    }
 
-    // Threat Score
     const threatScoreEl = document.getElementById('metric-threat-score');
     const threatBadgeEl = document.getElementById('metric-threat-badge');
     const threatSummaryEl = document.getElementById('metric-threat-summary');
+    const results = Array.isArray(data && data.results) ? data.results : [];
 
-    if (data.results && data.results.length > 0) {
-      const top = data.results[0];
+    if (results.length > 0) {
+      const top = results[0];
       if (threatScoreEl) {
-        threatScoreEl.textContent = top.intrusion_risk_score.toFixed(2);
-        threatScoreEl.className = 'text-2xl font-black text-rose-400';
+        const score = Number(top.intrusion_risk_score ?? 0);
+        threatScoreEl.textContent = Number.isFinite(score) ? score.toFixed(2) : '0.00';
+        threatScoreEl.className = 'mt-1 text-sm font-black text-rose-400';
       }
       if (threatBadgeEl) {
-        threatBadgeEl.textContent = top.threat_level;
-        threatBadgeEl.className = 'text-xs px-2 py-0.5 rounded bg-rose-950 text-rose-400 font-bold border border-rose-800';
+        const label = top.threat_level || 'HIGH';
+        threatBadgeEl.textContent = label;
+        threatBadgeEl.className = 'mt-1 text-[10px] px-2 py-1 rounded bg-rose-950 text-rose-400 font-bold border border-rose-800 inline-flex';
       }
       if (threatSummaryEl) {
-        threatSummaryEl.textContent = `${top.street} (Proximity: ${top.proximity_m}m)`;
-        threatSummaryEl.className = 'text-xs text-rose-400 font-medium';
+        const street = top.street || top.sector_id || 'Affected corridor';
+        const proximity = top.proximity_m ?? 'n/a';
+        threatSummaryEl.textContent = `${street} (Proximity: ${proximity}m)`;
+        threatSummaryEl.className = 'ml-1 text-rose-300 font-medium';
       }
 
-      // Render Corridor GeoJSON on Leaflet Map
       if (bufferCorridorLayer && data.corridor_geojson) {
         bufferCorridorLayer.clearLayers();
         bufferCorridorLayer.addData(data.corridor_geojson);
       }
 
-      renderCorridorTable(data.results);
+      renderCorridorTable(results);
     } else {
       clearBufferCorridors();
     }
 
-    // Update SQL modal template
     const sqlContentEl = document.getElementById('modal-sql-content');
     if (sqlContentEl && data.sql_query) {
       sqlContentEl.textContent = data.sql_query;
@@ -347,27 +351,36 @@ function renderCorridorTable(results) {
   const container = document.getElementById('corridor-results-container');
   if (!container) return;
 
+  const safeResults = Array.isArray(results) ? results : [];
   let html = `<div class="space-y-2.5">`;
-  results.forEach(r => {
+  safeResults.forEach(r => {
+    const street = r.street || r.sector_id || 'Affected corridor';
+    const threatLevel = r.threat_level || 'HIGH';
+    const score = Number(r.intrusion_risk_score ?? 0);
+    const proximity = r.proximity_m ?? 'n/a';
+    const sewerRating = r.pipe_condition_rating ?? 'n/a';
+    const corridorLength = r.corridor_length_m ?? 'n/a';
+    const rationale = r.rationale || 'Spatial proximity and asset condition indicate risk of cross-contamination during low-pressure events.';
+
     html += `
       <div class="bg-slate-950 p-3.5 rounded-xl border border-rose-900/60 flex items-start justify-between">
         <div class="space-y-1">
           <div class="flex items-center space-x-2">
-            <span class="text-xs font-bold text-white">${r.street}</span>
-            <span class="text-[10px] px-1.5 py-0.2 rounded bg-rose-950 text-rose-400 font-bold border border-rose-800">${r.threat_level}</span>
+            <span class="text-xs font-bold text-white">${street}</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded bg-rose-950 text-rose-400 font-bold border border-rose-800">${threatLevel}</span>
           </div>
           <div class="text-[11px] text-slate-300">
-            Water: <strong class="text-sky-400">${r.water_pipe_id}</strong> ⟂ Sewer: <strong class="text-amber-400">${r.sewer_id}</strong>
+            Water: <strong class="text-sky-400">${r.water_pipe_id || 'N/A'}</strong> ⟂ Sewer: <strong class="text-amber-400">${r.sewer_id || 'N/A'}</strong>
           </div>
           <div class="text-[10px] text-slate-400">
-            Separation: <strong class="text-white">${r.proximity_m}m</strong> | Sewer Rating: <strong class="text-rose-400">${r.pipe_condition_rating}/5.0</strong>
+            Separation: <strong class="text-white">${proximity}m</strong> | Sewer Rating: <strong class="text-rose-400">${sewerRating}/5.0</strong>
           </div>
-          <p class="text-[10px] text-slate-400 italic pt-1">${r.rationale}</p>
+          <p class="text-[10px] text-slate-400 italic pt-1">${rationale}</p>
         </div>
         <div class="text-right">
           <div class="text-[10px] text-slate-400 uppercase">Intrusion Score</div>
-          <div class="text-xl font-black text-rose-400">${r.intrusion_risk_score.toFixed(2)}</div>
-          <div class="text-[9px] text-slate-500">${r.corridor_length_m}m corridor</div>
+          <div class="text-xl font-black text-rose-400">${Number.isFinite(score) ? score.toFixed(2) : '0.00'}</div>
+          <div class="text-[9px] text-slate-500">${corridorLength}m corridor</div>
         </div>
       </div>
     `;

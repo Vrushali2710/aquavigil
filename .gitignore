@@ -44,6 +44,7 @@ venv.bak/
 # Secrets & Keys
 *.pem
 *key*.json
+credentials.json
 *.env.local
 
 # OS generated files

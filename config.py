@@ -8,8 +8,8 @@ class Settings:
     APP_NAME: str = "AquaVigil Platform"
     APP_VERSION: str = "1.0.0"
     TRACK: str = "Sustainability & Community Resilience"
-    PORT: int = 8080
-    HOST: str = "127.0.0.1"
+    PORT: int = int(os.getenv("PORT", "8080"))
+    HOST: str = os.getenv("HOST", "0.0.0.0")
     
     # Defaults
     GOOGLE_CLOUD_PROJECT: str = os.getenv("GOOGLE_CLOUD_PROJECT", "aquavigil-cloud-run")
