@@ -5,7 +5,6 @@ let networkGeoJsonLayer = null;
 let bufferCorridorLayer = null;
 let currentPreset = 'severe';
 let selectedFile = null;
-let selectedOnlineUrl = null;
 let currentOperationalStatus = null;
 let lastGisResults = null;
 
@@ -19,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
   refreshScadaStatus();
   selectPreset('severe');
   startLiveTelemetryTicker();
-  setupOnlineImageAndPasteListeners();
+  setupImageUploadListeners();
 });
 
 // Switch Between Personas & Views (Safe for unified layout)
@@ -405,79 +404,45 @@ function onCitizenAddressChange() {
   updateCitizenPipeIndicator();
 }
 
-// Setup Online Image & Global Clipboard Paste Listeners
-function setupOnlineImageAndPasteListeners() {
-  const input = document.getElementById('online-image-url-input');
-  if (input) {
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        loadOnlineImageUrl();
+// Setup Image Upload & Drag/Drop/Paste Listeners
+function setupImageUploadListeners() {
+  window.addEventListener('paste', handleGlobalPaste);
+
+  const previewBox = document.getElementById('filter-preview-box');
+  if (previewBox) {
+    previewBox.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      previewBox.classList.add('ring-2', 'ring-sky-500');
+    });
+    previewBox.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      previewBox.classList.remove('ring-2', 'ring-sky-500');
+    });
+    previewBox.addEventListener('drop', (e) => {
+      e.preventDefault();
+      previewBox.classList.remove('ring-2', 'ring-sky-500');
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleFileUpload({ target: { files: e.dataTransfer.files } });
       }
     });
   }
-  window.addEventListener('paste', handleGlobalPaste);
 }
 
 function handleGlobalPaste(e) {
-  // 1. Check for pasted image binary in clipboard
   if (e.clipboardData && e.clipboardData.items) {
     for (let i = 0; i < e.clipboardData.items.length; i++) {
       const item = e.clipboardData.items[i];
       if (item.type.indexOf('image') !== -1) {
         const file = item.getAsFile();
         if (file) {
-          selectedFile = file;
-          currentPreset = null;
-          selectedOnlineUrl = null;
-          updatePresetButtons(null);
-
-          const reader = new FileReader();
-          reader.onload = (evt) => {
-            const previewImg = document.getElementById('filter-preview-img');
-            if (previewImg) previewImg.src = evt.target.result;
-          };
-          reader.readAsDataURL(file);
-
+          handleFileUpload({ target: { files: [file] } });
           const badge = document.getElementById('active-image-source');
-          if (badge) badge.textContent = "Source: Clipboard Image (Pasted)";
+          if (badge) badge.textContent = "Uploaded: Clipboard Image";
           return;
         }
       }
     }
   }
-
-  // 2. Check for pasted URL text in clipboard
-  if (e.clipboardData) {
-    const text = e.clipboardData.getData('text').trim();
-    if (text.startsWith('http://') || text.startsWith('https://')) {
-      const input = document.getElementById('online-image-url-input');
-      if (input && document.activeElement !== input) {
-        input.value = text;
-        loadOnlineImageUrl();
-      }
-    }
-  }
-}
-
-function loadOnlineImageUrl() {
-  const input = document.getElementById('online-image-url-input');
-  if (!input) return;
-  const url = input.value.trim();
-  if (!url) return;
-
-  selectedOnlineUrl = url;
-  selectedFile = null;
-  currentPreset = null;
-  updatePresetButtons(null);
-
-  const previewImg = document.getElementById('filter-preview-img');
-  if (previewImg) {
-    previewImg.src = url;
-  }
-
-  const badge = document.getElementById('active-image-source');
-  if (badge) badge.textContent = "Source: Online URL";
 }
 
 function updatePresetButtons(activePreset) {
@@ -497,7 +462,6 @@ function updatePresetButtons(activePreset) {
 function selectPreset(preset) {
   currentPreset = preset;
   selectedFile = null;
-  selectedOnlineUrl = null;
 
   updatePresetButtons(preset);
 
@@ -514,8 +478,8 @@ function selectPreset(preset) {
 
   const badge = document.getElementById('active-image-source');
   if (badge) {
-    const labels = { clean: 'Clean Filter Preset', moderate: 'Silt Filter Preset', severe: 'Biofilm Preset (0.84)' };
-    badge.textContent = `Source: ${labels[preset] || preset}`;
+    const labels = { clean: 'Clean Filter (0.08)', moderate: 'Silt Filter (0.52)', severe: 'Biofilm Preset (0.84)' };
+    badge.textContent = labels[preset] || preset;
   }
 }
 
@@ -525,7 +489,6 @@ function handleFileUpload(e) {
 
   selectedFile = file;
   currentPreset = null;
-  selectedOnlineUrl = null;
 
   updatePresetButtons(null);
 
@@ -537,7 +500,7 @@ function handleFileUpload(e) {
   reader.readAsDataURL(file);
 
   const badge = document.getElementById('active-image-source');
-  if (badge) badge.textContent = `Source: Upload (${file.name})`;
+  if (badge) badge.textContent = `Uploaded: ${file.name}`;
 }
 
 // Execute Gemini Multimodal Visual Analysis & Two-Tier Escalation
@@ -550,9 +513,7 @@ async function executeFilterAnalysis() {
 
   try {
     let formData = new FormData();
-    if (selectedOnlineUrl) {
-      formData.append('image_url', selectedOnlineUrl);
-    } else if (selectedFile) {
+    if (selectedFile) {
       formData.append('file', selectedFile);
     } else if (currentPreset) {
       formData.append('preset', currentPreset);

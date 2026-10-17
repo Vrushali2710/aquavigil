@@ -175,6 +175,10 @@
                 <i data-lucide="camera" class="w-3 h-3"></i>
                 <span>Live Cam</span>
               </button>
+              <button type="button" onclick="document.getElementById('filter-file-input').click()" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] text-sky-400 font-bold flex items-center space-x-1" title="Upload an Image from your device">
+                <i data-lucide="upload" class="w-3 h-3"></i>
+                <span>Upload</span>
+              </button>
               <button onclick="selectPreset('clean')" class="preset-btn px-2 py-1 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[10px] text-slate-300 font-medium" id="preset-btn-clean">Clean</button>
               <button onclick="selectPreset('moderate')" class="preset-btn px-2 py-1 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[10px] text-slate-300 font-medium" id="preset-btn-moderate">Silt</button>
               <button onclick="selectPreset('severe')" class="preset-btn px-2 py-1 rounded bg-rose-950/40 border border-rose-800 text-[10px] text-rose-300 font-bold active-preset" id="preset-btn-severe">Biofilm (0.84)</button>
@@ -182,26 +186,24 @@
           </div>
 
           <!-- Photo Preview Box -->
-          <div id="filter-preview-box" class="h-44 rounded-xl border border-slate-800 bg-slate-950 flex items-center justify-center p-2 relative overflow-hidden group">
+          <div id="filter-preview-box" class="h-44 rounded-xl border border-slate-800 bg-slate-950 flex items-center justify-center p-2 relative overflow-hidden group cursor-pointer" onclick="document.getElementById('filter-file-input').click()" title="Click to upload an image from your computer">
             <img id="filter-preview-img" src="/api/samples/severe_biofilm_rust_filter.svg" alt="Pre-filter preview" class="max-h-full object-contain filter drop-shadow">
             <video id="live-camera-feed" class="hidden w-full h-full object-cover rounded-lg" autoplay playsinline></video>
             <canvas id="camera-canvas" class="hidden"></canvas>
-            <input type="file" id="filter-file-input" accept="image/*" onchange="handleFileUpload(event)" class="absolute inset-0 opacity-0 cursor-pointer" title="Click or drop a photo to test custom image">
+            <input type="file" id="filter-file-input" accept="image/*" onchange="handleFileUpload(event)" class="hidden">
+            <div class="absolute bottom-2 right-2 bg-slate-900/90 text-slate-300 px-2 py-0.5 rounded text-[10px] border border-slate-700 flex items-center space-x-1 opacity-75 group-hover:opacity-100 transition pointer-events-none">
+              <i data-lucide="upload" class="w-3 h-3 text-sky-400"></i>
+              <span>Click or Drop to Upload</span>
+            </div>
           </div>
 
-          <!-- Online Image URL & Clipboard Paste Bar -->
-          <div class="space-y-1.5">
-            <div class="flex items-center space-x-1.5">
-              <input type="text" id="online-image-url-input" placeholder="Paste image link from internet (https://...jpg) or press Ctrl+V" class="flex-1 bg-slate-950 border border-slate-800 focus:border-sky-500 rounded-lg px-2.5 py-1.5 text-[11px] text-white placeholder:text-slate-600 focus:outline-none transition">
-              <button type="button" onclick="loadOnlineImageUrl()" class="px-2.5 py-1.5 rounded-lg bg-sky-950 hover:bg-sky-900 border border-sky-800 text-[11px] text-sky-300 font-bold flex items-center space-x-1 transition shadow" title="Load online image">
-                <i data-lucide="link" class="w-3 h-3"></i>
-                <span>Load URL</span>
-              </button>
-            </div>
-            <div class="flex justify-between items-center text-[10px] text-slate-500 px-1">
-              <span>Drop file, click box, or press <kbd class="px-1 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">Ctrl+V</kbd> to paste</span>
-              <span id="active-image-source" class="text-sky-400 font-medium">Source: Biofilm Preset</span>
-            </div>
+          <!-- Dedicated Upload Action Bar -->
+          <div class="flex items-center justify-between bg-slate-950 px-3 py-2 rounded-xl border border-slate-800">
+            <button type="button" onclick="document.getElementById('filter-file-input').click()" class="py-1 px-3 rounded-lg bg-sky-950 hover:bg-sky-900 border border-sky-800 text-sky-300 font-bold text-xs flex items-center space-x-1.5 transition shadow">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+              <span>Upload Image File</span>
+            </button>
+            <span id="active-image-source" class="text-[11px] text-slate-400 font-mono truncate max-w-[220px]">Biofilm Preset (0.84)</span>
           </div>
 
           <!-- Analyze Trigger Buttons -->
