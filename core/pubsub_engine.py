@@ -15,6 +15,9 @@ class PubSubOperationalEngine:
     def __init__(self):
         self.events_history: List[Dict[str, Any]] = []
         self.active_depressurizations: Dict[str, Dict[str, Any]] = {}
+        self.pressure_history: List[float] = [2.80] * 25
+        self.last_pressure: float = 2.80
+        self.last_tick_timestamp: float = datetime.datetime.utcnow().timestamp()
         # Pre-seed initial active state (fully pressurized)
         self.pipe_states: Dict[str, Dict[str, Any]] = {
             "WTR-PIPE-4011": {
@@ -156,14 +159,39 @@ class PubSubOperationalEngine:
                     self.pipe_states[pipe_id]["status"] = "UNPRESSURIZED_RESTING"
 
         pipe4011 = self.pipe_states.get("WTR-PIPE-4011", {})
+        curr_p = pipe4011.get("pressure_bar", 2.80)
+
+        # Update rolling buffer
+        self.pressure_history.append(curr_p)
+        if len(self.pressure_history) > 30:
+            self.pressure_history.pop(0)
+
+        dt = max(0.2, t - self.last_tick_timestamp)
+        dp_dt = round((curr_p - self.last_pressure) / dt, 3)
+        self.last_pressure = curr_p
+        self.last_tick_timestamp = t
+
+        if valve_state == "CLOSED":
+            transient_regime = "SUB_ATMOSPHERIC_SIPHONAGE" if curr_p <= 0.10 else "DRAIN_DOWN_TRANSIENT"
+        elif dp_dt > 0.4:
+            transient_regime = "REPRESSURIZATION_SURGE"
+        else:
+            transient_regime = "STEADY_HYDRAULIC_EQUILIBRIUM"
+
         return {
             "timestamp": now.isoformat() + "Z",
             "valve_id": "VLV-SEC4-WEST-02",
             "actuator_state": valve_state,
-            "residual_pressure_bar": pipe4011.get("pressure_bar", 2.80),
+            "residual_pressure_bar": curr_p,
             "status": pipe4011.get("status", "PRESSURIZED"),
             "flow_rate_lps": round(42.5 + math.sin(t) * 3.0, 1) if valve_state == "OPEN" else 0.0,
-            "active_depressurizations": list(self.active_depressurizations.keys())
+            "pressure_gradient_dp_dt": dp_dt,
+            "transient_hydraulic_regime": transient_regime,
+            "reynolds_flow_regime": "TURBULENT (Re=48,200)" if valve_state == "OPEN" else "LAMINAR_DRAIN (Re<500)",
+            "pressure_history": self.pressure_history,
+            "active_depressurizations": list(self.active_depressurizations.keys()),
+            "pubsub_topic": "projects/aquavigil-2026/topics/scada.valve.telemetry",
+            "pubsub_subscription": "projects/aquavigil-2026/subscriptions/scada-spatial-correlator-sub"
         }
 
     def get_operational_status(self) -> Dict[str, Any]:

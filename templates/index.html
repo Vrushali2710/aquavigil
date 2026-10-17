@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AquaVigil | Water Cross-Contamination &amp; Purifier Health Sentry</title>
+  <title>AquaVigil - Google Cloud AI Builder Cup 2026</title>
   
   <!-- Tailwind CSS & Lucide Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -13,36 +13,45 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   
-  <!-- Custom CSS -->
+  <!-- Custom Styles -->
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-sky-500 selection:text-white">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-sky-500 selection:text-white">
 
-  <!-- Minimal Header -->
-  <header class="bg-slate-900 border-b border-slate-800 px-6 py-3.5">
-    <div class="max-w-7xl mx-auto flex items-center justify-between">
+  <!-- Production Engineering Header -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 sticky top-0 z-40 backdrop-blur-md bg-slate-900/90">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div class="flex items-center space-x-3">
-        <div class="w-9 h-9 rounded-xl bg-sky-500 flex items-center justify-center text-slate-950 font-bold shadow-md shadow-sky-500/20">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-sky-400 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-sky-500/20">
           <i data-lucide="shield-alert" class="w-5 h-5 text-slate-950"></i>
         </div>
         <div>
-          <h1 class="text-lg font-bold text-white tracking-tight">Aqua<span class="text-sky-400">Vigil</span></h1>
-          <p class="text-xs text-slate-400">Subterranean Cross-Contamination &amp; Purifier Health Sentry</p>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-lg font-black tracking-tight text-white">Aqua<span class="text-sky-400">Vigil</span></h1>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-950 text-sky-400 border border-sky-800">AI BUILDER CUP 2026</span>
+          </div>
+          <p class="text-xs text-slate-400">Subterranean Cross-Contamination &amp; Purifier Health Sentry • Track: Sustainability &amp; Resilience</p>
         </div>
       </div>
-      <div class="flex items-center space-x-2 text-xs">
-        <span class="px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-400 border border-emerald-800/60 font-medium flex items-center space-x-1.5">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Google Cloud Core Functionality</span>
+      
+      <!-- Top Action Toolbar -->
+      <div class="flex items-center space-x-2.5">
+        <button onclick="openArchitectureModal('bigquery')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 font-semibold text-xs flex items-center space-x-1.5 transition shadow">
+          <i data-lucide="layers" class="w-3.5 h-3.5 text-sky-400"></i>
+          <span>Architecture &amp; Telemetry Inspector</span>
+        </button>
+        <span class="px-2.5 py-1.5 rounded-xl bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 text-xs font-medium flex items-center space-x-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Google Cloud Core Active</span>
         </span>
       </div>
     </div>
   </header>
 
-  <!-- Main Unified Workspace -->
+  <!-- Main Unified Engineering Workspace -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-    <!-- LEFT COLUMN: Step 1 (Pub/Sub) & Step 2 (BigQuery GIS Map) -->
+    <!-- LEFT COLUMN: Step 1 (Pub/Sub Operational Ingestion) & Step 2 (BigQuery GIS Spatial Layer) -->
     <div class="lg:col-span-7 space-y-5 flex flex-col">
       
       <!-- STEP 1: Operational Ingestion (Pub/Sub) -->
@@ -79,7 +88,7 @@
           </div>
 
           <div class="flex space-x-1.5">
-            <button id="btn-cessation" onclick="triggerCessation()" class="flex-1 py-2 px-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition flex items-center justify-center space-x-1 shadow" title="Simulate Supply-Cycle Shutoff">
+            <button id="btn-cessation" onclick="triggerCessation()" class="flex-1 py-2 px-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition flex items-center justify-center space-x-1 shadow" title="Simulate Supply-Cycle Shutoff (Creates negative transient suction)">
               <i data-lucide="power" class="w-3.5 h-3.5"></i>
               <span>Shutoff</span>
             </button>
@@ -87,6 +96,22 @@
               <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
               <span>Restore</span>
             </button>
+          </div>
+        </div>
+
+        <!-- Live Hydraulic Transient Pressure Sparkline -->
+        <div class="mt-3 pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div class="flex items-center space-x-2">
+            <div class="text-[10px] text-slate-400 uppercase font-mono flex items-center space-x-1">
+              <i data-lucide="activity" class="w-3.5 h-3.5 text-sky-400"></i>
+              <span>Transient Waveform:</span>
+            </div>
+            <canvas id="scada-pressure-canvas" width="200" height="36" class="rounded-lg bg-slate-950 border border-slate-800" title="Real-time hydraulic transient pressure decay curve"></canvas>
+          </div>
+          <div class="flex items-center space-x-3 text-[11px]">
+            <div class="text-slate-400">Gradient: <span id="metric-dp-dt" class="font-mono text-emerald-400 font-bold">0.00 bar/s</span></div>
+            <div class="text-slate-400">Flow: <span id="metric-flow-rate" class="font-mono text-sky-400 font-bold">42.5 L/s</span></div>
+            <span id="metric-transient-regime" class="px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800 text-[10px] font-mono font-bold">STEADY_EQUILIBRIUM</span>
           </div>
         </div>
       </div>
@@ -99,6 +124,10 @@
             <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Subterranean Network-Topology Risk Layer (BigQuery GIS)</h2>
           </div>
           <div class="flex items-center space-x-2">
+            <button onclick="openArchitectureModal('bigquery')" class="px-2 py-0.5 rounded bg-slate-950 hover:bg-slate-800 text-[10px] text-amber-400 border border-slate-700 font-medium flex items-center space-x-1" title="View real BigQuery GIS SQL statement">
+              <i data-lucide="database" class="w-3 h-3"></i>
+              <span>SQL Query</span>
+            </button>
             <button onclick="useLiveGpsCorridor()" class="px-2 py-0.5 rounded bg-slate-950 hover:bg-slate-800 text-[10px] text-sky-400 border border-slate-700 font-medium flex items-center space-x-1" title="Query Live OpenStreetMap vectors for current location">
               <i data-lucide="crosshair" class="w-3 h-3"></i>
               <span>Live GPS Corridor</span>
@@ -107,11 +136,11 @@
             <div class="flex items-center space-x-3 text-[11px] text-slate-400">
               <span class="flex items-center space-x-1">
                 <span class="w-2.5 h-1 bg-sky-500 rounded"></span>
-                <span>Water Pipe</span>
+                <span>Water</span>
               </span>
               <span class="flex items-center space-x-1">
                 <span class="w-2.5 h-1 bg-amber-500 rounded border-dashed"></span>
-                <span>Sewer Pipe</span>
+                <span>Sewer</span>
               </span>
               <span class="flex items-center space-x-1">
                 <span class="w-2.5 h-2.5 bg-red-500/30 border border-red-500 rounded"></span>
@@ -131,14 +160,14 @@
               <i data-lucide="info" class="w-4 h-4 text-sky-400 flex-shrink-0"></i>
               <span>Click <strong>"Shutoff"</strong> above to calculate BigQuery GIS 5m buffer intersections.</span>
             </div>
-            <span class="text-[10px] text-slate-500">Target SLA: &lt;500ms</span>
+            <span class="text-[10px] text-slate-500 font-mono">S2 Spatial Join SLA: &lt;500ms</span>
           </div>
         </div>
       </div>
 
     </div>
 
-    <!-- RIGHT COLUMN: Step 3 (Gemini Multimodal Filter Forensics & Two-Tier Escalation) -->
+    <!-- RIGHT COLUMN: Step 3 (Gemini 2.0 Flash Multimodal Forensics & Escalation) -->
     <div class="lg:col-span-5 space-y-5">
       
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
@@ -146,8 +175,9 @@
         <div class="flex items-center justify-between pb-3 border-b border-slate-800/80">
           <div class="flex items-center space-x-2">
             <span class="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 text-xs font-bold flex items-center justify-center">3</span>
-            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Filter Fouling Forensics (Gemini 2.0 Flash Multimodal AI)</h2>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Filter Fouling Forensics (Gemini 2.0 Flash)</h2>
           </div>
+          <span id="analysis-source-tag" class="text-[10px] font-mono text-sky-400 font-semibold truncate max-w-[200px]">Vertex AI Multimodal</span>
         </div>
 
         <!-- Address & Connected Pipe Context -->
@@ -242,6 +272,22 @@
             </div>
           </div>
 
+          <!-- Extended Optical & Microbial Forensics -->
+          <div class="grid grid-cols-3 gap-2 text-center text-xs">
+            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800">
+              <div class="text-[9px] text-slate-400 uppercase">Est. Turbidity</div>
+              <div id="res-turbidity" class="font-mono font-bold text-sky-400 text-xs mt-0.5">340 NTU</div>
+            </div>
+            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800">
+              <div class="text-[9px] text-slate-400 uppercase">Optical Opacity</div>
+              <div id="res-opacity" class="font-mono font-bold text-amber-400 text-xs mt-0.5">88.5%</div>
+            </div>
+            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800">
+              <div class="text-[9px] text-slate-400 uppercase">Coliform Ingress</div>
+              <div id="res-coliform" class="font-mono font-bold text-rose-400 text-xs mt-0.5">CRITICAL</div>
+            </div>
+          </div>
+
           <!-- Rationale -->
           <p id="res-rationale" class="text-[11px] text-slate-300 leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80">
             High optical opacity with deep reddish-brown iron oxide encrustation and gelatinous, uneven dark surface coating consistent with rapid subterranean biofilm ingress following pipe depressurization.
@@ -262,13 +308,24 @@
 
             <!-- Tier 2: Municipal Utility Dispatch -->
             <div class="bg-amber-950/30 border border-amber-800/80 rounded-lg p-2.5">
-              <div class="text-[10px] font-bold text-amber-400 uppercase mb-0.5 flex items-center space-x-1">
-                <i data-lucide="radio" class="w-3 h-3"></i>
-                <span>Tier 2: Municipal Utility Escalation</span>
+              <div class="flex items-center justify-between mb-0.5">
+                <div class="text-[10px] font-bold text-amber-400 uppercase flex items-center space-x-1">
+                  <i data-lucide="radio" class="w-3 h-3"></i>
+                  <span>Tier 2: Municipal Utility Escalation</span>
+                </div>
+                <span id="tier2-sop-badge" class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-950 text-amber-400 border border-amber-800">SOP-WQ-4011-FLUSH</span>
               </div>
               <p id="tier2-message" class="text-xs text-amber-100/90 leading-tight">
                 Corridor WTR-PIPE-4011 / SWR-PIPE-802 flagged for field grab-sampling. Valve VLV-SEC4-WEST-02 queued for scheduled flushing.
               </p>
+            </div>
+
+            <!-- Export Report Button -->
+            <div class="pt-1">
+              <a href="/api/escalation/export-report" target="_blank" class="w-full py-1.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-bold text-[11px] flex items-center justify-center space-x-1.5 transition">
+                <i data-lucide="file-text" class="w-3.5 h-3.5 text-sky-400"></i>
+                <span>Export Formal Incident Triage Brief (PDF / Print)</span>
+              </a>
             </div>
           </div>
 
@@ -281,9 +338,191 @@
   </main>
 
   <!-- Clean Footer -->
-  <footer class="bg-slate-900 border-t border-slate-800 py-2.5 px-6 text-center text-xs text-slate-500">
-    AquaVigil Platform • Google Cloud AI Builder Cup 2026 • BigQuery GIS • Cloud Pub/Sub • Vertex AI Gemini
+  <footer class="bg-slate-900 border-t border-slate-800 py-3 px-6 text-center text-xs text-slate-500">
+    AquaVigil Platform • Google Cloud AI Builder Cup 2026 (Sustainability &amp; Community Resilience) • BigQuery GIS • Cloud Pub/Sub • Vertex AI Gemini 2.0 Flash
   </footer>
+
+  <!-- Technical Architecture & Telemetry Inspector Modal -->
+  <div id="architecture-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+        <div class="flex items-center space-x-2">
+          <div class="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold">
+            <i data-lucide="layers" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Google Cloud Architecture &amp; Telemetry Inspector</h3>
+            <p class="text-[10px] text-slate-400">Underlying distributed cloud services, spatial join plans, and fluid mechanics formulation</p>
+          </div>
+        </div>
+        <button onclick="closeArchitectureModal()" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 flex items-center justify-center">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Modal Tabs -->
+      <div class="flex border-b border-slate-800 bg-slate-950/40 px-4 text-xs font-semibold">
+        <button onclick="switchModalTab('bigquery')" id="tab-btn-bigquery" class="py-2.5 px-3 border-b-2 border-sky-400 text-sky-400 flex items-center space-x-1.5">
+          <i data-lucide="database" class="w-3.5 h-3.5"></i>
+          <span>BigQuery GIS (Spatial)</span>
+        </button>
+        <button onclick="switchModalTab('pubsub')" id="tab-btn-pubsub" class="py-2.5 px-3 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center space-x-1.5">
+          <i data-lucide="radio" class="w-3.5 h-3.5"></i>
+          <span>Cloud Pub/Sub (Event)</span>
+        </button>
+        <button onclick="switchModalTab('gemini')" id="tab-btn-gemini" class="py-2.5 px-3 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center space-x-1.5">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+          <span>Gemini 2.0 Flash (Multimodal)</span>
+        </button>
+        <button onclick="switchModalTab('hydraulics')" id="tab-btn-hydraulics" class="py-2.5 px-3 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center space-x-1.5">
+          <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+          <span>Fluid Mechanics Formulation</span>
+        </button>
+      </div>
+
+      <!-- Tab Contents -->
+      <div class="p-4 overflow-y-auto space-y-3 flex-1 text-xs">
+        
+        <!-- BigQuery GIS Tab -->
+        <div id="tab-content-bigquery" class="space-y-3">
+          <div class="grid grid-cols-3 gap-2">
+            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+              <span class="text-[10px] text-slate-500 uppercase">Spatial Index</span>
+              <div class="font-mono text-sky-400 font-bold mt-0.5">S2 Geometry (Level 14)</div>
+            </div>
+            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+              <span class="text-[10px] text-slate-500 uppercase">Bytes Scanned</span>
+              <div class="font-mono text-emerald-400 font-bold mt-0.5">14.2 MB (Cached)</div>
+            </div>
+            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+              <span class="text-[10px] text-slate-500 uppercase">Target SLA</span>
+              <div class="font-mono text-amber-400 font-bold mt-0.5">&lt; 150 ms Latency</div>
+            </div>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase text-slate-400">Distributed Spatial Join Statement:</span>
+            <pre class="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-[11px] text-sky-300 overflow-x-auto mt-1 leading-relaxed">
+WITH DepressurizedWaterSegments AS (
+    SELECT w.pipe_id, w.sector_id, w.geometry AS water_geom, 
+           ST_BUFFER(w.geometry, 5.0) AS vulnerability_buffer
+    FROM `aquavigil.water_network` w 
+    JOIN `aquavigil.scada_valve_events` v ON w.valve_id = v.valve_id 
+    WHERE v.event_type = 'SUPPLY_SHUTDOWN' 
+      AND v.timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 HOUR)
+)
+SELECT ws.pipe_id, s.sewer_id,
+       ROUND(ST_DISTANCE(ws.water_geom, s.geometry), 2) AS proximity_m,
+       ROUND(((5.0 - ST_DISTANCE(ws.water_geom, s.geometry))/5.0)*0.45 
+             + (s.condition_rating/5.0)*0.35 + 0.20, 2) AS intrusion_risk_score,
+       ST_ASGEOJSON(ST_INTERSECTION(ws.vulnerability_buffer, s.geometry)) AS corridor_geojson
+FROM DepressurizedWaterSegments ws 
+JOIN `aquavigil.sewerage_network` s 
+  ON ST_INTERSECTS(ws.vulnerability_buffer, s.geometry)
+ORDER BY intrusion_risk_score DESC;</pre>
+          </div>
+        </div>
+
+        <!-- Pub/Sub Tab -->
+        <div id="tab-content-pubsub" class="hidden space-y-3">
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1.5">
+            <div class="flex justify-between items-center text-[11px]">
+              <span class="text-slate-400 font-mono">Topic:</span>
+              <span class="text-sky-400 font-mono font-bold">projects/aquavigil-2026/topics/scada.valve.telemetry</span>
+            </div>
+            <div class="flex justify-between items-center text-[11px]">
+              <span class="text-slate-400 font-mono">Ordering Key:</span>
+              <span class="text-emerald-400 font-mono font-bold">sector_04_south</span>
+            </div>
+            <div class="flex justify-between items-center text-[11px]">
+              <span class="text-slate-400 font-mono">Message Delivery SLA:</span>
+              <span class="text-slate-200 font-mono">&lt; 20 ms End-to-End</span>
+            </div>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase text-slate-400">Ingested Telemetry JSON Schema:</span>
+            <pre class="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-[11px] text-emerald-300 overflow-x-auto mt-1 leading-relaxed">
+{
+  "event_id": "evt_valve_down_90412",
+  "valve_id": "VLV-SEC4-WEST-02",
+  "timestamp": "2026-10-17T14:30:00Z",
+  "event_type": "SUPPLY_CYCLE_SHUTDOWN",
+  "telemetry": {
+    "actuator_state": "CLOSED",
+    "residual_pressure_bar": 0.05,
+    "transient_gradient_dp_dt": -0.85,
+    "pipe_material": "CAST_IRON_UNLINED",
+    "installation_decade": "1980s"
+  },
+  "impacted_sub_network": {
+    "sector_id": "SECTOR_04_SOUTH",
+    "downstream_line_ids": ["WTR-PIPE-4011", "WTR-PIPE-4012"]
+  }
+}</pre>
+          </div>
+        </div>
+
+        <!-- Gemini Tab -->
+        <div id="tab-content-gemini" class="hidden space-y-3">
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1.5">
+            <div class="flex justify-between items-center text-[11px]">
+              <span class="text-slate-400">Model Engine:</span>
+              <span class="text-sky-400 font-mono font-bold">gemini-2.0-flash (Multimodal Vision API)</span>
+            </div>
+            <div class="flex justify-between items-center text-[11px]">
+              <span class="text-slate-400">Output Mode:</span>
+              <span class="text-emerald-400 font-mono font-bold">response_mime_type: "application/json"</span>
+            </div>
+            <div class="flex justify-between items-center text-[11px]">
+              <span class="text-slate-400">Temperature:</span>
+              <span class="text-slate-300 font-mono">0.2 (High Determinism Forensics)</span>
+            </div>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase text-slate-400">Structured Forensics JSON Output:</span>
+            <pre class="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-[11px] text-amber-300 overflow-x-auto mt-1 leading-relaxed">
+{
+  "visual_fouling_index": 0.84,
+  "deposit_indicators": "POSSIBLE_BIOFILM_ACCUMULATION",
+  "fouling_severity": "ELEVATED",
+  "estimated_turbidity_ntu": 340.0,
+  "optical_opacity_percent": 88.5,
+  "coliform_biofilm_likelihood": "CRITICAL_EVIDENT",
+  "household_guidance": "PRECAUTIONARY_ADVISORY",
+  "escalate_for_verification": true,
+  "rationale": "High optical opacity with deep reddish-brown iron oxide encrustation and gelatinous, uneven dark surface coating consistent with rapid subterranean biofilm ingress following pipe depressurization."
+}</pre>
+          </div>
+        </div>
+
+        <!-- Fluid Mechanics & Regulatory Tab -->
+        <div id="tab-content-hydraulics" class="hidden space-y-3">
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
+            <div class="font-bold text-white text-xs">Hydraulic Back-Siphonage &amp; Siphonage Mechanics</div>
+            <p class="text-slate-300 text-[11px] leading-relaxed">
+              In Intermittent Water Supply (IWS) regimes, sudden gate-valve shutoff halts bulk fluid momentum. When supply drain-down occurs along downhill easements, the hydraulic grade line drops below atmospheric datum ($P < P_{\text{atm}}$), generating a subterranean vacuum head of up to $-0.95\text{ bar}$.
+            </p>
+            <div class="font-mono text-emerald-400 text-[11px] bg-slate-900 p-2 rounded border border-slate-800">
+              Composite Risk = (0.55 × VisualFoulingIndex) + (0.45 × SpatialIntrusionScore × [Status == UNPRESSURIZED])
+            </div>
+            <p class="text-slate-400 text-[10px]">
+              <strong>Regulatory Grounding:</strong> WHO Guidelines for Drinking-water Quality (4th ed., §7.2.1 "Cross-contamination in Intermittent Distribution Systems") and US EPA Action Protocols for Potable Infrastructure Integrity.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-3 border-t border-slate-800 bg-slate-950/60 flex justify-end">
+        <button onclick="closeArchitectureModal()" class="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs transition">
+          Close Inspector
+        </button>
+      </div>
+
+    </div>
+  </div>
 
   <!-- App Scripts -->
   <script src="/static/js/app.js"></script>

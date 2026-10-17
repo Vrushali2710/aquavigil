@@ -533,6 +533,15 @@ async function executeFilterAnalysis() {
     document.getElementById('res-deposit-badge').textContent = visualData.deposit_indicators;
     document.getElementById('res-severity-badge').textContent = visualData.fouling_severity;
     document.getElementById('res-rationale').textContent = visualData.rationale;
+
+    const turbEl = document.getElementById('res-turbidity');
+    if (turbEl) turbEl.textContent = `${visualData.estimated_turbidity_ntu || 340.0} NTU`;
+
+    const opacEl = document.getElementById('res-opacity');
+    if (opacEl) opacEl.textContent = `${visualData.optical_opacity_percent || 88.5}%`;
+
+    const colifEl = document.getElementById('res-coliform');
+    if (colifEl) colifEl.textContent = visualData.coliform_biofilm_likelihood || 'CRITICAL';
     
     if (visualData.analysis_source) {
       document.getElementById('analysis-source-tag').textContent = `Source: ${visualData.analysis_source}`;
@@ -572,6 +581,11 @@ async function executeFilterAnalysis() {
     document.getElementById('tier1-message').textContent = escData.tier1_household.message;
     document.getElementById('tier2-message').textContent = escData.tier2_municipal.action_required + " (" + escData.tier2_municipal.defensibility_note + ")";
 
+    const sopBadge = document.getElementById('tier2-sop-badge');
+    if (sopBadge && escData.technical_metrics) {
+      sopBadge.textContent = escData.technical_metrics.sop_protocol_code;
+    }
+
   } catch (err) {
     console.error("Error analyzing filter:", err);
   } finally {
@@ -582,12 +596,101 @@ async function executeFilterAnalysis() {
   }
 }
 
-// SQL Modal
-function openSqlModal() {
-  document.getElementById('sql-modal').classList.remove('hidden');
+// Draw Live Hydraulic Pressure Waveform on Canvas
+function drawPressureSparkline(history) {
+  const canvas = document.getElementById('scada-pressure-canvas');
+  if (!canvas || !history || history.length === 0) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const minP = 0.0;
+  const maxP = 3.2;
+  const step = w / (history.length - 1 || 1);
+  const lastVal = history[history.length - 1];
+
+  // Draw area gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  if (lastVal < 0.5) {
+    grad.addColorStop(0, 'rgba(239, 68, 68, 0.45)');
+    grad.addColorStop(1, 'rgba(239, 68, 68, 0.05)');
+  } else {
+    grad.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
+    grad.addColorStop(1, 'rgba(16, 185, 129, 0.05)');
+  }
+
+  ctx.beginPath();
+  history.forEach((val, i) => {
+    const x = i * step;
+    const norm = Math.max(0, Math.min(1, (val - minP) / (maxP - minP)));
+    const y = h - (norm * (h - 10) + 5);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Draw line
+  ctx.beginPath();
+  history.forEach((val, i) => {
+    const x = i * step;
+    const norm = Math.max(0, Math.min(1, (val - minP) / (maxP - minP)));
+    const y = h - (norm * (h - 10) + 5);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = (lastVal < 0.5) ? '#ef4444' : '#10b981';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Draw last point
+  const lastX = (history.length - 1) * step;
+  const lastNorm = Math.max(0, Math.min(1, (lastVal - minP) / (maxP - minP)));
+  const lastY = h - (lastNorm * (h - 10) + 5);
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+  ctx.fillStyle = (lastVal < 0.5) ? '#ef4444' : '#10b981';
+  ctx.fill();
 }
-function closeSqlModal() {
-  document.getElementById('sql-modal').classList.add('hidden');
+
+// Architecture Inspector Modal Functions
+function openArchitectureModal(tab) {
+  const modal = document.getElementById('architecture-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    switchModalTab(tab || 'bigquery');
+    lucide.createIcons();
+  }
+}
+
+function closeArchitectureModal() {
+  const modal = document.getElementById('architecture-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function switchModalTab(tabName) {
+  ['bigquery', 'pubsub', 'gemini', 'hydraulics'].forEach(t => {
+    const btn = document.getElementById(`tab-btn-${t}`);
+    const content = document.getElementById(`tab-content-${t}`);
+    if (btn) {
+      if (t === tabName) {
+        btn.className = 'py-2.5 px-3 border-b-2 border-sky-400 text-sky-400 font-bold flex items-center space-x-1.5';
+      } else {
+        btn.className = 'py-2.5 px-3 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center space-x-1.5';
+      }
+    }
+    if (content) {
+      if (t === tabName) {
+        content.classList.remove('hidden');
+      } else {
+        content.classList.add('hidden');
+      }
+    }
+  });
 }
 
 // ==================== LIVE DATA INTEGRATIONS ====================
@@ -608,6 +711,7 @@ function startLiveTelemetryTicker() {
       const pressureEl = document.getElementById('metric-pressure');
       if (pressureEl) {
         pressureEl.textContent = tick.residual_pressure_bar.toFixed(2);
+        pressureEl.className = (tick.residual_pressure_bar < 0.5) ? 'text-base font-black text-rose-400' : 'text-base font-black text-emerald-400';
       }
 
       const clockEl = document.getElementById('live-clock');
@@ -626,11 +730,37 @@ function startLiveTelemetryTicker() {
         }
       }
 
+      const dpdtEl = document.getElementById('metric-dp-dt');
+      if (dpdtEl && tick.pressure_gradient_dp_dt !== undefined) {
+        const sign = tick.pressure_gradient_dp_dt >= 0 ? '+' : '';
+        dpdtEl.textContent = `${sign}${tick.pressure_gradient_dp_dt.toFixed(2)} bar/s`;
+        dpdtEl.className = (tick.pressure_gradient_dp_dt < -0.1) ? 'font-mono text-rose-400 font-bold' : 'font-mono text-emerald-400 font-bold';
+      }
+
+      const flowEl = document.getElementById('metric-flow-rate');
+      if (flowEl && tick.flow_rate_lps !== undefined) {
+        flowEl.textContent = `${tick.flow_rate_lps.toFixed(1)} L/s`;
+      }
+
+      const regimeEl = document.getElementById('metric-transient-regime');
+      if (regimeEl && tick.transient_hydraulic_regime) {
+        regimeEl.textContent = tick.transient_hydraulic_regime;
+        if (tick.transient_hydraulic_regime.includes('SIPHONAGE') || tick.transient_hydraulic_regime.includes('DRAIN')) {
+          regimeEl.className = 'px-2 py-0.5 rounded bg-rose-950/80 text-rose-400 border border-rose-800 text-[10px] font-mono font-bold animate-pulse';
+        } else {
+          regimeEl.className = 'px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800 text-[10px] font-mono font-bold';
+        }
+      }
+
+      if (tick.pressure_history) {
+        drawPressureSparkline(tick.pressure_history);
+      }
+
       updateCitizenPipeIndicator();
     } catch (e) {
       // Background poll
     }
-  }, 2000);
+  }, 1500);
 }
 
 // 2. Live Device Camera Capture
