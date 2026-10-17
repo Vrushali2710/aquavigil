@@ -5,6 +5,7 @@ let networkGeoJsonLayer = null;
 let bufferCorridorLayer = null;
 let currentPreset = 'severe';
 let selectedFile = null;
+let selectedOnlineUrl = null;
 let currentOperationalStatus = null;
 let lastGisResults = null;
 
@@ -17,29 +18,14 @@ document.addEventListener("DOMContentLoaded", () => {
   loadNetworkTopology();
   refreshScadaStatus();
   selectPreset('severe');
+  startLiveTelemetryTicker();
+  setupOnlineImageAndPasteListeners();
 });
 
-// Switch Between Personas & Views
+// Switch Between Personas & Views (Safe for unified layout)
 function switchPersona(persona) {
-  const views = ['municipal', 'citizen', 'blueprint', 'defense'];
-  views.forEach(v => {
-    const el = document.getElementById(`view-${v}`);
-    const tab = document.getElementById(`tab-${v}`);
-    if (v === persona) {
-      el.classList.remove('hidden');
-      tab.classList.add('bg-sky-600', 'text-white', 'shadow');
-      tab.classList.remove('text-slate-400');
-    } else {
-      el.classList.add('hidden');
-      tab.classList.remove('bg-sky-600', 'text-white', 'shadow');
-      tab.classList.add('text-slate-400');
-    }
-  });
-
-  if (persona === 'municipal' && map) {
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 200);
+  if (map) {
+    setTimeout(() => { map.invalidateSize(); }, 150);
   }
 }
 
@@ -346,9 +332,12 @@ function clearBufferCorridors() {
   const container = document.getElementById('corridor-results-container');
   if (container) {
     container.innerHTML = `
-      <div class="text-center py-6 text-slate-400 text-xs">
-        <i data-lucide="compass" class="w-8 h-8 mx-auto mb-2 text-slate-600"></i>
-        No active depressurization corridors identified.<br>Trigger supply shutdown to run BigQuery GIS spatial intersection.
+      <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="info" class="w-4 h-4 text-sky-400 flex-shrink-0"></i>
+          <span>Click <strong>"Shutoff"</strong> above to calculate BigQuery GIS 5m buffer intersections.</span>
+        </div>
+        <span class="text-[10px] text-slate-500">Target SLA: &lt;500ms</span>
       </div>
     `;
     lucide.createIcons();
@@ -416,21 +405,101 @@ function onCitizenAddressChange() {
   updateCitizenPipeIndicator();
 }
 
-// Preset selection
-function selectPreset(preset) {
-  currentPreset = preset;
-  selectedFile = null;
+// Setup Online Image & Global Clipboard Paste Listeners
+function setupOnlineImageAndPasteListeners() {
+  const input = document.getElementById('online-image-url-input');
+  if (input) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        loadOnlineImageUrl();
+      }
+    });
+  }
+  window.addEventListener('paste', handleGlobalPaste);
+}
 
+function handleGlobalPaste(e) {
+  // 1. Check for pasted image binary in clipboard
+  if (e.clipboardData && e.clipboardData.items) {
+    for (let i = 0; i < e.clipboardData.items.length; i++) {
+      const item = e.clipboardData.items[i];
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          selectedFile = file;
+          currentPreset = null;
+          selectedOnlineUrl = null;
+          updatePresetButtons(null);
+
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            const previewImg = document.getElementById('filter-preview-img');
+            if (previewImg) previewImg.src = evt.target.result;
+          };
+          reader.readAsDataURL(file);
+
+          const badge = document.getElementById('active-image-source');
+          if (badge) badge.textContent = "Source: Clipboard Image (Pasted)";
+          return;
+        }
+      }
+    }
+  }
+
+  // 2. Check for pasted URL text in clipboard
+  if (e.clipboardData) {
+    const text = e.clipboardData.getData('text').trim();
+    if (text.startsWith('http://') || text.startsWith('https://')) {
+      const input = document.getElementById('online-image-url-input');
+      if (input && document.activeElement !== input) {
+        input.value = text;
+        loadOnlineImageUrl();
+      }
+    }
+  }
+}
+
+function loadOnlineImageUrl() {
+  const input = document.getElementById('online-image-url-input');
+  if (!input) return;
+  const url = input.value.trim();
+  if (!url) return;
+
+  selectedOnlineUrl = url;
+  selectedFile = null;
+  currentPreset = null;
+  updatePresetButtons(null);
+
+  const previewImg = document.getElementById('filter-preview-img');
+  if (previewImg) {
+    previewImg.src = url;
+  }
+
+  const badge = document.getElementById('active-image-source');
+  if (badge) badge.textContent = "Source: Online URL";
+}
+
+function updatePresetButtons(activePreset) {
   ['clean', 'moderate', 'severe'].forEach(p => {
     const btn = document.getElementById(`preset-btn-${p}`);
     if (btn) {
-      if (p === preset) {
+      if (p === activePreset) {
         btn.classList.add('active-preset');
       } else {
         btn.classList.remove('active-preset');
       }
     }
   });
+}
+
+// Preset selection
+function selectPreset(preset) {
+  currentPreset = preset;
+  selectedFile = null;
+  selectedOnlineUrl = null;
+
+  updatePresetButtons(preset);
 
   const previewImg = document.getElementById('filter-preview-img');
   if (previewImg) {
@@ -442,6 +511,12 @@ function selectPreset(preset) {
       previewImg.src = '/api/samples/clean_filter.svg';
     }
   }
+
+  const badge = document.getElementById('active-image-source');
+  if (badge) {
+    const labels = { clean: 'Clean Filter Preset', moderate: 'Silt Filter Preset', severe: 'Biofilm Preset (0.84)' };
+    badge.textContent = `Source: ${labels[preset] || preset}`;
+  }
 }
 
 function handleFileUpload(e) {
@@ -450,11 +525,9 @@ function handleFileUpload(e) {
 
   selectedFile = file;
   currentPreset = null;
+  selectedOnlineUrl = null;
 
-  ['clean', 'moderate', 'severe'].forEach(p => {
-    const btn = document.getElementById(`preset-btn-${p}`);
-    if (btn) btn.classList.remove('active-preset');
-  });
+  updatePresetButtons(null);
 
   const reader = new FileReader();
   reader.onload = (event) => {
@@ -462,19 +535,24 @@ function handleFileUpload(e) {
     if (previewImg) previewImg.src = event.target.result;
   };
   reader.readAsDataURL(file);
+
+  const badge = document.getElementById('active-image-source');
+  if (badge) badge.textContent = `Source: Upload (${file.name})`;
 }
 
 // Execute Gemini Multimodal Visual Analysis & Two-Tier Escalation
 async function executeFilterAnalysis() {
   const btn = document.getElementById('btn-run-analysis');
   if (btn) {
-    btn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i><span>Analyzing with Gemini 1.5 Pro...</span>`;
+    btn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i><span>Analyzing with Gemini 2.0 Flash...</span>`;
     lucide.createIcons();
   }
 
   try {
     let formData = new FormData();
-    if (selectedFile) {
+    if (selectedOnlineUrl) {
+      formData.append('image_url', selectedOnlineUrl);
+    } else if (selectedFile) {
       formData.append('file', selectedFile);
     } else if (currentPreset) {
       formData.append('preset', currentPreset);
@@ -537,7 +615,7 @@ async function executeFilterAnalysis() {
     console.error("Error analyzing filter:", err);
   } finally {
     if (btn) {
-      btn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4"></i><span>Analyze with Gemini 1.5 Pro</span>`;
+      btn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4"></i><span>Analyze with Gemini 2.0 Flash</span>`;
       lucide.createIcons();
     }
   }
@@ -551,29 +629,153 @@ function closeSqlModal() {
   document.getElementById('sql-modal').classList.add('hidden');
 }
 
-// API Key Modal
-function openApiKeyModal() {
-  document.getElementById('key-modal').classList.remove('hidden');
+// ==================== LIVE DATA INTEGRATIONS ====================
+
+let liveCameraStream = null;
+let liveTelemetryTimer = null;
+
+// 1. Live SCADA Stream Ticker
+function startLiveTelemetryTicker() {
+  if (liveTelemetryTimer) clearInterval(liveTelemetryTimer);
+
+  liveTelemetryTimer = setInterval(async () => {
+    try {
+      const res = await fetch('/api/scada/live-tick');
+      if (!res.ok) return;
+      const tick = await res.json();
+
+      const pressureEl = document.getElementById('metric-pressure');
+      if (pressureEl) {
+        pressureEl.textContent = tick.residual_pressure_bar.toFixed(2);
+      }
+
+      const clockEl = document.getElementById('live-clock');
+      if (clockEl) {
+        clockEl.textContent = new Date(tick.timestamp).toLocaleTimeString() + " UTC";
+      }
+
+      const valveEl = document.getElementById('scada-valve-state');
+      if (valveEl) {
+        if (tick.actuator_state === 'OPEN') {
+          valveEl.textContent = 'OPEN (100%)';
+          valveEl.className = 'text-xs font-bold text-emerald-400 mt-0.5';
+        } else {
+          valveEl.textContent = 'CLOSED (0%) - SHUTOFF';
+          valveEl.className = 'text-xs font-bold text-rose-400 mt-0.5';
+        }
+      }
+
+      updateCitizenPipeIndicator();
+    } catch (e) {
+      // Background poll
+    }
+  }, 2000);
 }
-function closeApiKeyModal() {
-  document.getElementById('key-modal').classList.add('hidden');
-}
-async function saveApiKey() {
-  const key = document.getElementById('input-gemini-key').value.trim();
-  if (!key) return;
+
+// 2. Live Device Camera Capture
+async function toggleLiveCamera() {
+  const video = document.getElementById('live-camera-feed');
+  const img = document.getElementById('filter-preview-img');
+  const btnSnap = document.getElementById('btn-snap-camera');
+  const btnAnalyze = document.getElementById('btn-run-analysis');
+  const btnCam = document.getElementById('btn-camera');
+
+  if (liveCameraStream) {
+    liveCameraStream.getTracks().forEach(t => t.stop());
+    liveCameraStream = null;
+    video.classList.add('hidden');
+    img.classList.remove('hidden');
+    btnSnap.classList.add('hidden');
+    btnAnalyze.classList.remove('hidden');
+    btnCam.classList.remove('bg-rose-950', 'text-rose-300', 'border-rose-800');
+    btnCam.classList.add('bg-sky-950', 'text-sky-300', 'border-sky-800');
+    btnCam.innerHTML = `<i data-lucide="camera" class="w-3 h-3"></i><span>Live Cam</span>`;
+    lucide.createIcons();
+    return;
+  }
 
   try {
-    const res = await fetch('/api/settings/update-key', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gemini_api_key: key })
+    liveCameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
     });
-    const data = await res.json();
-    alert("Gemini API Key configured successfully!");
-    closeApiKeyModal();
-    const lbl = document.getElementById('api-key-label');
-    if (lbl) lbl.textContent = 'Key Active ✓';
+    video.srcObject = liveCameraStream;
+    video.classList.remove('hidden');
+    img.classList.add('hidden');
+    btnSnap.classList.remove('hidden');
+    btnAnalyze.classList.add('hidden');
+
+    btnCam.classList.remove('bg-sky-950', 'text-sky-300', 'border-sky-800');
+    btnCam.classList.add('bg-rose-950', 'text-rose-300', 'border-rose-800');
+    btnCam.innerHTML = `<i data-lucide="x" class="w-3 h-3"></i><span>Close Cam</span>`;
+    lucide.createIcons();
   } catch (err) {
-    alert("Error saving key: " + err);
+    alert("Camera access notice: " + (err.message || "Please allow webcam permission to capture live filter photo."));
   }
+}
+
+async function snapLivePhoto() {
+  const video = document.getElementById('live-camera-feed');
+  const canvas = document.getElementById('camera-canvas');
+  if (!video || !canvas) return;
+
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  canvas.toBlob(async (blob) => {
+    selectedFile = new File([blob], "live_camera_capture.jpg", { type: "image/jpeg" });
+    currentPreset = null;
+
+    const img = document.getElementById('filter-preview-img');
+    img.src = canvas.toDataURL('image/jpeg');
+
+    toggleLiveCamera();
+    await executeFilterAnalysis();
+  }, 'image/jpeg', 0.9);
+}
+
+// 3. Live GPS & Real OpenStreetMap Corridors
+function useLiveGpsCorridor() {
+  if (!navigator.geolocation) {
+    alert("Geolocation is not supported by your browser.");
+    return;
+  }
+
+  const btn = event.currentTarget;
+  if (btn) btn.innerHTML = `<i data-lucide="loader" class="w-3 h-3 animate-spin"></i><span>Locating...</span>`;
+  lucide.createIcons();
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+
+    if (map) {
+      map.flyTo([lat, lon], 17, { duration: 1.5 });
+    }
+
+    try {
+      const res = await fetch(`/api/network/fetch-live-osm?lat=${lat}&lon=${lon}`);
+      const data = await res.json();
+      if (data.status === 'SUCCESS' && data.features) {
+        L.geoJSON(data, {
+          style: { color: '#0284c7', weight: 4, opacity: 0.85 }
+        }).addTo(map);
+        alert(`✓ Loaded live OpenStreetMap corridors around your location (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+      }
+    } catch (e) {
+      console.warn("Could not load OSM corridors:", e);
+    } finally {
+      if (btn) {
+        btn.innerHTML = `<i data-lucide="crosshair" class="w-3 h-3"></i><span>Live GPS</span>`;
+        lucide.createIcons();
+      }
+    }
+  }, (err) => {
+    alert("Location notice: " + (err.message || "Could not retrieve live GPS location."));
+    if (btn) {
+      btn.innerHTML = `<i data-lucide="crosshair" class="w-3 h-3"></i><span>Live GPS</span>`;
+      lucide.createIcons();
+    }
+  });
 }

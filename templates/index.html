@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AquaVigil | Subterranean Cross-Contamination &amp; Purifier Health Sentry</title>
+  <title>AquaVigil | Water Cross-Contamination &amp; Purifier Health Sentry</title>
   
   <!-- Tailwind CSS & Lucide Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -15,695 +15,276 @@
   
   <!-- Custom CSS -->
   <link rel="stylesheet" href="/static/css/styles.css">
-  
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#f0f9ff',
-              100: '#e0f2fe',
-              500: '#0284c7',
-              600: '#0369a1',
-              700: '#075985',
-              900: '#0c4a6e',
-            },
-            google: {
-              blue: '#4285F4',
-              red: '#EA4335',
-              yellow: '#FBBC05',
-              green: '#34A853'
-            }
-          }
-        }
-      }
-    }
-  </script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-sky-500 selection:text-white">
 
-  <!-- Top Navbar -->
-  <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 sticky top-0 z-50 px-4 lg:px-8 py-3">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-      
-      <!-- Brand & Hackathon Tag -->
+  <!-- Minimal Header -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-3.5">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-cyan-300 flex items-center justify-center shadow-lg shadow-sky-500/20 text-slate-950 font-black text-xl">
-          <i data-lucide="shield-alert" class="w-6 h-6 text-slate-950"></i>
+        <div class="w-9 h-9 rounded-xl bg-sky-500 flex items-center justify-center text-slate-950 font-bold shadow-md shadow-sky-500/20">
+          <i data-lucide="shield-alert" class="w-5 h-5 text-slate-950"></i>
         </div>
         <div>
-          <div class="flex items-center space-x-2">
-            <span class="text-xl font-bold tracking-tight text-white">Aqua<span class="text-sky-400">Vigil</span></span>
-            <span class="px-2 py-0.5 text-xs font-semibold rounded bg-sky-950 text-sky-400 border border-sky-800">
-              AI BUILDER CUP 2026
-            </span>
-          </div>
-          <p class="text-xs text-slate-400">Track: <span class="text-emerald-400 font-medium">Sustainability &amp; Community Resilience</span></p>
+          <h1 class="text-lg font-bold text-white tracking-tight">Aqua<span class="text-sky-400">Vigil</span></h1>
+          <p class="text-xs text-slate-400">Subterranean Cross-Contamination &amp; Purifier Health Sentry</p>
         </div>
       </div>
-
-      <!-- Persona Navigation Switcher -->
-      <nav class="flex items-center space-x-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
-        <button id="tab-municipal" onclick="switchPersona('municipal')" class="px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center space-x-1.5 bg-sky-600 text-white shadow">
-          <i data-lucide="building-2" class="w-4 h-4"></i>
-          <span>Municipal Engineer</span>
-        </button>
-        <button id="tab-citizen" onclick="switchPersona('citizen')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition flex items-center space-x-1.5">
-          <i data-lucide="home" class="w-4 h-4"></i>
-          <span>Citizen Sentry</span>
-        </button>
-        <button id="tab-blueprint" onclick="switchPersona('blueprint')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-amber-400 hover:text-amber-300 transition flex items-center space-x-1.5">
-          <i data-lucide="presentation" class="w-4 h-4"></i>
-          <span>3-Min Demo Mode</span>
-        </button>
-        <button id="tab-defense" onclick="switchPersona('defense')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition flex items-center space-x-1.5">
-          <i data-lucide="shield-check" class="w-4 h-4"></i>
-          <span>Judge Defense</span>
-        </button>
-      </nav>
-
-      <!-- GCP Architecture Pill & API Key Modal Button -->
-      <div class="flex items-center space-x-2">
-        <div class="hidden xl:flex items-center space-x-2 text-xs bg-slate-800/80 border border-slate-700/60 rounded-lg px-3 py-1.5 text-slate-300">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Cloud Run • BigQuery GIS • Pub/Sub • Vertex AI</span>
-        </div>
-        <button onclick="openApiKeyModal()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 flex items-center space-x-1 transition" title="Optional: Configure Gemini API Key">
-          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
-          <span id="api-key-label" class="text-emerald-400 font-medium">Account-Free (Local)</span>
-        </button>
+      <div class="flex items-center space-x-2 text-xs">
+        <span class="px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-400 border border-emerald-800/60 font-medium flex items-center space-x-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Google Cloud Core Functionality</span>
+        </span>
       </div>
     </div>
   </header>
 
-  <!-- 3-Minute Demo Blueprint Floating Interactive Bar (Always accessible) -->
-  <div class="bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 border-b border-sky-900/40 px-4 py-2">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
-      <div class="flex items-center space-x-2">
-        <span class="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded font-mono font-bold uppercase">
-          Demo Blueprint
-        </span>
-        <span class="text-slate-300 hidden sm:inline">1-Click Live Pitch Sequence:</span>
-      </div>
-      <div class="flex items-center space-x-2 flex-wrap">
-        <button onclick="demoStep1TriggerEvent()" class="demo-step-btn px-3 py-1.5 rounded bg-slate-800 hover:bg-sky-600 text-slate-200 border border-slate-700 hover:border-sky-500 font-medium transition flex items-center space-x-1">
-          <span class="font-bold text-sky-400 mr-1">Min 1</span>
-          <i data-lucide="power" class="w-3.5 h-3.5 text-rose-400"></i>
-          <span>Trigger Shutoff</span>
-        </button>
-        <button onclick="demoStep2SpatialTriage()" class="demo-step-btn px-3 py-1.5 rounded bg-slate-800 hover:bg-sky-600 text-slate-200 border border-slate-700 hover:border-sky-500 font-medium transition flex items-center space-x-1">
-          <span class="font-bold text-sky-400 mr-1">Min 2</span>
-          <i data-lucide="map-pin" class="w-3.5 h-3.5 text-amber-400"></i>
-          <span>BigQuery GIS Triage</span>
-        </button>
-        <button onclick="demoStep3ContextualTriage()" class="demo-step-btn px-3 py-1.5 rounded bg-slate-800 hover:bg-sky-600 text-slate-200 border border-slate-700 hover:border-sky-500 font-medium transition flex items-center space-x-1">
-          <span class="font-bold text-sky-400 mr-1">Min 3</span>
-          <i data-lucide="scan-eye" class="w-3.5 h-3.5 text-emerald-400"></i>
-          <span>Gemini Multimodal Sentry</span>
-        </button>
-        <button onclick="resetDemoState()" class="px-2 py-1.5 rounded bg-slate-800/60 hover:bg-slate-700 text-slate-400 hover:text-white transition" title="Reset Demo Simulation">
-          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-        </button>
-      </div>
-    </div>
-  </div>
+  <!-- Main Unified Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-  <!-- Main Container -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6">
-
-    <!-- VIEW 1: MUNICIPAL ENGINEER COCKPIT -->
-    <div id="view-municipal" class="space-y-6">
+    <!-- LEFT COLUMN: Step 1 (Pub/Sub) & Step 2 (BigQuery GIS Map) -->
+    <div class="lg:col-span-7 space-y-5 flex flex-col">
       
-      <!-- Top Metrics Banner -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm">
-          <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
-            <span>SECTOR FOCUS</span>
-            <i data-lucide="map" class="w-4 h-4 text-sky-400"></i>
+      <!-- STEP 1: Operational Ingestion (Pub/Sub) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
+          <div class="flex items-center space-x-2">
+            <span class="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 text-xs font-bold flex items-center justify-center">1</span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Valve Event Ingestion (Cloud Pub/Sub)</h2>
+            <span class="flex items-center space-x-1.5 px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-mono">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span id="live-telemetry-badge">LIVE SCADA STREAM</span>
+            </span>
           </div>
-          <div class="text-lg font-bold text-white">Sector 04 (South)</div>
-          <p class="text-xs text-slate-400">IWS Supply Grid • 180m Shared Easement</p>
+          <span id="live-clock" class="text-[11px] font-mono text-slate-400">Live UTC</span>
         </div>
 
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm">
-          <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
-            <span>NETWORK PRESSURE</span>
-            <i data-lucide="gauge" class="w-4 h-4 text-emerald-400"></i>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 items-center">
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase">Valve ID</div>
+            <div class="text-xs font-mono font-bold text-sky-400 mt-0.5">VLV-SEC4-WEST-02</div>
           </div>
-          <div class="flex items-baseline space-x-2">
-            <span id="metric-pressure" class="text-2xl font-black text-emerald-400">2.80</span>
-            <span class="text-xs text-slate-400">bar</span>
-          </div>
-          <p id="metric-pressure-label" class="text-xs text-emerald-400 font-medium">Fully Pressurized Active Supply</p>
-        </div>
 
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm">
-          <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
-            <span>BIGQUERY GIS LATENCY</span>
-            <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase">Actuator State</div>
+            <div id="scada-valve-state" class="text-xs font-bold text-emerald-400 mt-0.5">OPEN (100%)</div>
           </div>
-          <div class="flex items-baseline space-x-2">
-            <span id="metric-latency" class="text-2xl font-black text-white">42.1</span>
-            <span class="text-xs text-slate-400">ms</span>
-          </div>
-          <p class="text-xs text-emerald-400 font-medium">&lt; 500ms Target Achieved</p>
-        </div>
 
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm">
-          <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
-            <span>INTRUSION THREAT LEVEL</span>
-            <i data-lucide="alert-triangle" class="w-4 h-4 text-sky-400"></i>
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase">Mains Pressure</div>
+            <div class="flex items-baseline space-x-1 mt-0.5">
+              <span id="metric-pressure" class="text-base font-black text-emerald-400">2.80</span>
+              <span class="text-[10px] text-slate-400">bar</span>
+            </div>
           </div>
-          <div class="flex items-baseline space-x-2">
-            <span id="metric-threat-score" class="text-2xl font-black text-slate-400">0.00</span>
-            <span id="metric-threat-badge" class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300">NOMINAL</span>
+
+          <div class="flex space-x-1.5">
+            <button id="btn-cessation" onclick="triggerCessation()" class="flex-1 py-2 px-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition flex items-center justify-center space-x-1 shadow" title="Simulate Supply-Cycle Shutoff">
+              <i data-lucide="power" class="w-3.5 h-3.5"></i>
+              <span>Shutoff</span>
+            </button>
+            <button id="btn-repressurize" onclick="triggerRepressurize()" class="flex-1 py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition flex items-center justify-center space-x-1" title="Restore Normal Water Pressure">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              <span>Restore</span>
+            </button>
           </div>
-          <p id="metric-threat-summary" class="text-xs text-slate-400">All potable lines pressurized</p>
         </div>
       </div>
 
-      <!-- Main GIS Cockpit Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- Left: Map Component (7 cols) -->
-        <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col shadow-xl">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-            <div class="flex items-center space-x-2">
-              <i data-lucide="layers" class="w-4 h-4 text-sky-400"></i>
-              <h2 class="text-sm font-bold uppercase tracking-wider text-slate-200">Subterranean Topology &amp; Proximity Map</h2>
-            </div>
-            <!-- Map Legend -->
-            <div class="flex items-center space-x-3 text-xs text-slate-400">
+      <!-- STEP 2: BigQuery GIS Spatial Risk Map -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm flex-1 flex flex-col">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
+          <div class="flex items-center space-x-2">
+            <span class="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 text-xs font-bold flex items-center justify-center">2</span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Subterranean Network-Topology Risk Layer (BigQuery GIS)</h2>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="useLiveGpsCorridor()" class="px-2 py-0.5 rounded bg-slate-950 hover:bg-slate-800 text-[10px] text-sky-400 border border-slate-700 font-medium flex items-center space-x-1" title="Query Live OpenStreetMap vectors for current location">
+              <i data-lucide="crosshair" class="w-3 h-3"></i>
+              <span>Live GPS Corridor</span>
+            </button>
+            <!-- Legend -->
+            <div class="flex items-center space-x-3 text-[11px] text-slate-400">
               <span class="flex items-center space-x-1">
-                <span class="w-3 h-1 bg-sky-500 rounded"></span>
-                <span>Water Main</span>
+                <span class="w-2.5 h-1 bg-sky-500 rounded"></span>
+                <span>Water Pipe</span>
               </span>
               <span class="flex items-center space-x-1">
-                <span class="w-3 h-1 bg-amber-500 rounded border-dashed"></span>
-                <span>Sewer Line</span>
+                <span class="w-2.5 h-1 bg-amber-500 rounded border-dashed"></span>
+                <span>Sewer Pipe</span>
               </span>
               <span class="flex items-center space-x-1">
-                <span class="w-3 h-3 bg-red-500/30 border border-red-500 rounded"></span>
+                <span class="w-2.5 h-2.5 bg-red-500/30 border border-red-500 rounded"></span>
                 <span>5m Buffer</span>
               </span>
             </div>
           </div>
-
-          <!-- Leaflet Map Canvas -->
-          <div id="map" class="w-full h-[450px] rounded-xl overflow-hidden relative border border-slate-800"></div>
-
-          <!-- Live Map Bar -->
-          <div class="mt-3 flex items-center justify-between text-xs text-slate-400 px-1">
-            <div class="flex items-center space-x-2">
-              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span>Coordinate Frame: WGS84 • Spatial Engine: BigQuery GIS ST_BUFFER</span>
-            </div>
-            <button onclick="fitMapBounds()" class="text-sky-400 hover:text-sky-300 flex items-center space-x-1">
-              <i data-lucide="maximize" class="w-3 h-3"></i>
-              <span>Recenter Sector</span>
-            </button>
-          </div>
         </div>
 
-        <!-- Right: Operational SCADA & Spatial Triage Controls (5 cols) -->
-        <div class="lg:col-span-5 space-y-6">
-          
-          <!-- Pillar II: SCADA Pub/Sub Operational Ingestion Card -->
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-              <div class="flex items-center space-x-2">
-                <i data-lucide="radio" class="w-4 h-4 text-emerald-400"></i>
-                <h3 class="text-sm font-bold text-white uppercase tracking-wider">Pillar II: Cloud Pub/Sub SCADA Ingestion</h3>
-              </div>
-              <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800">
-                TOPIC: scada.valve.telemetry
-              </span>
+        <!-- Leaflet Map Canvas -->
+        <div id="map" class="w-full h-80 lg:h-96 rounded-xl overflow-hidden relative border border-slate-800 bg-slate-950"></div>
+
+        <!-- BigQuery GIS Proximity Results Card -->
+        <div id="corridor-results-container" class="mt-3">
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="info" class="w-4 h-4 text-sky-400 flex-shrink-0"></i>
+              <span>Click <strong>"Shutoff"</strong> above to calculate BigQuery GIS 5m buffer intersections.</span>
             </div>
-
-            <div class="space-y-4">
-              <div class="flex items-center justify-between bg-slate-950 p-3 rounded-xl border border-slate-800">
-                <div>
-                  <div class="text-xs text-slate-400">Isolation Valve ID</div>
-                  <div class="text-sm font-mono font-bold text-sky-400">VLV-SEC4-WEST-02</div>
-                  <div class="text-[11px] text-slate-400">Controls Downstream: WTR-PIPE-4011, 4012</div>
-                </div>
-                <div class="text-right">
-                  <div class="text-xs text-slate-400">Actuator State</div>
-                  <div id="scada-valve-state" class="text-sm font-bold text-emerald-400">OPEN (100%)</div>
-                </div>
-              </div>
-
-              <!-- Valve Trigger Controls -->
-              <div class="grid grid-cols-2 gap-3">
-                <button id="btn-cessation" onclick="triggerCessation()" class="w-full py-2.5 px-3 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white font-medium text-xs transition flex items-center justify-center space-x-1.5 shadow-lg shadow-rose-900/20">
-                  <i data-lucide="power-off" class="w-4 h-4"></i>
-                  <span>Supply Shutdown</span>
-                </button>
-                <button id="btn-repressurize" onclick="triggerRepressurize()" class="w-full py-2.5 px-3 rounded-xl bg-sky-600/90 hover:bg-sky-500 text-white font-medium text-xs transition flex items-center justify-center space-x-1.5 shadow-lg shadow-sky-900/20">
-                  <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                  <span>Restore Pressure</span>
-                </button>
-              </div>
-
-              <!-- Real-time PubSub Payload Snippet -->
-              <div class="bg-slate-950 rounded-xl p-3 border border-slate-800/80 font-mono text-[11px] text-slate-300">
-                <div class="flex items-center justify-between text-slate-400 mb-1">
-                  <span>LAST INGESTED PUB/SUB PAYLOAD</span>
-                  <span id="payload-timestamp" class="text-[10px]">Ready</span>
-                </div>
-                <pre id="scada-payload-preview" class="overflow-x-auto text-sky-300/90 leading-relaxed max-h-32">// Awaiting operational event trigger...</pre>
-              </div>
-            </div>
+            <span class="text-[10px] text-slate-500">Target SLA: &lt;500ms</span>
           </div>
-
-          <!-- Pillar I: BigQuery GIS Spatial Risk Layer Card -->
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-              <div class="flex items-center space-x-2">
-                <i data-lucide="database" class="w-4 h-4 text-sky-400"></i>
-                <h3 class="text-sm font-bold text-white uppercase tracking-wider">Pillar I: BigQuery GIS Risk Layer</h3>
-              </div>
-              <button onclick="openSqlModal()" class="text-xs text-sky-400 hover:text-sky-300 flex items-center space-x-1">
-                <i data-lucide="code" class="w-3 h-3"></i>
-                <span>View SQL</span>
-              </button>
-            </div>
-
-            <!-- Spatial Corridor Results Table -->
-            <div id="corridor-results-container" class="space-y-3">
-              <div class="text-center py-6 text-slate-400 text-xs">
-                <i data-lucide="compass" class="w-8 h-8 mx-auto mb-2 text-slate-600"></i>
-                No active depressurization corridors identified.<br>Trigger supply shutdown to run BigQuery GIS spatial intersection.
-              </div>
-            </div>
-          </div>
-
         </div>
       </div>
+
     </div>
 
-    <!-- VIEW 2: CITIZEN / HOUSEHOLD SENTRY PORTAL -->
-    <div id="view-citizen" class="hidden space-y-6 max-w-4xl mx-auto">
+    <!-- RIGHT COLUMN: Step 3 (Gemini Multimodal Filter Forensics & Two-Tier Escalation) -->
+    <div class="lg:col-span-5 space-y-5">
       
-      <div class="bg-gradient-to-br from-slate-900 to-sky-950 border border-sky-800/40 rounded-3xl p-6 lg:p-8 shadow-2xl">
-        <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800">
-          <div>
-            <div class="flex items-center space-x-2">
-              <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30">
-                Pillar III: Multimodal Filter Fouling Forensics
-              </span>
-            </div>
-            <h2 class="text-2xl font-black text-white mt-2">Household Purifier &amp; Pre-Filter Sentry</h2>
-            <p class="text-sm text-slate-400">Resident Point-of-Use Verification Powered by Gemini 1.5 Pro</p>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+        
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800/80">
+          <div class="flex items-center space-x-2">
+            <span class="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 text-xs font-bold flex items-center justify-center">3</span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Filter Fouling Forensics (Gemini 2.0 Flash Multimodal AI)</h2>
           </div>
+        </div>
 
-          <!-- Household Address Selector -->
-          <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 min-w-[260px]">
-            <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Select Endpoint Address</label>
-            <select id="citizen-address-select" onchange="onCitizenAddressChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500 font-medium">
-              <option value="HOUSE-PIN-01">104 Pine Avenue, Apt 2B (WTR-PIPE-4011)</option>
-              <option value="HOUSE-PIN-02">118 Pine Avenue, Unit 1 (WTR-PIPE-4011)</option>
+        <!-- Address & Connected Pipe Context -->
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-slate-400">Endpoint Address:</span>
+            <select id="citizen-address-select" onchange="onCitizenAddressChange()" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white">
+              <option value="HOUSE-PIN-01">104 Pine Avenue (WTR-PIPE-4011)</option>
+              <option value="HOUSE-PIN-02">118 Pine Avenue (WTR-PIPE-4011)</option>
               <option value="HOUSE-ELM-03">205 Elm Way (WTR-PIPE-4012)</option>
             </select>
-            <div id="citizen-pipe-status" class="mt-2 text-[11px] flex items-center space-x-1.5 text-slate-400">
-              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span>Water Main: Pressurized (2.8 bar)</span>
-            </div>
+          </div>
+          <div id="citizen-pipe-status" class="text-[11px] text-slate-400 flex items-center space-x-1.5 pt-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>Mains Pressure: 2.80 bar (Pressurized)</span>
           </div>
         </div>
 
-        <!-- Filter Upload & Inspection Section -->
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-8 mt-6">
+        <!-- Filter Photo & Test Sample Presets -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-semibold text-slate-300 uppercase tracking-wide">Pre-Filter Canister Photo:</span>
+            <div class="flex space-x-1 items-center">
+              <button id="btn-camera" onclick="toggleLiveCamera()" class="px-2 py-1 rounded bg-sky-950 hover:bg-sky-900 border border-sky-800 text-[10px] text-sky-300 font-bold flex items-center space-x-1" title="Use Device Webcam / Camera">
+                <i data-lucide="camera" class="w-3 h-3"></i>
+                <span>Live Cam</span>
+              </button>
+              <button onclick="selectPreset('clean')" class="preset-btn px-2 py-1 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[10px] text-slate-300 font-medium" id="preset-btn-clean">Clean</button>
+              <button onclick="selectPreset('moderate')" class="preset-btn px-2 py-1 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[10px] text-slate-300 font-medium" id="preset-btn-moderate">Silt</button>
+              <button onclick="selectPreset('severe')" class="preset-btn px-2 py-1 rounded bg-rose-950/40 border border-rose-800 text-[10px] text-rose-300 font-bold active-preset" id="preset-btn-severe">Biofilm (0.84)</button>
+            </div>
+          </div>
+
+          <!-- Photo Preview Box -->
+          <div id="filter-preview-box" class="h-44 rounded-xl border border-slate-800 bg-slate-950 flex items-center justify-center p-2 relative overflow-hidden group">
+            <img id="filter-preview-img" src="/api/samples/severe_biofilm_rust_filter.svg" alt="Pre-filter preview" class="max-h-full object-contain filter drop-shadow">
+            <video id="live-camera-feed" class="hidden w-full h-full object-cover rounded-lg" autoplay playsinline></video>
+            <canvas id="camera-canvas" class="hidden"></canvas>
+            <input type="file" id="filter-file-input" accept="image/*" onchange="handleFileUpload(event)" class="absolute inset-0 opacity-0 cursor-pointer" title="Click or drop a photo to test custom image">
+          </div>
+
+          <!-- Online Image URL & Clipboard Paste Bar -->
+          <div class="space-y-1.5">
+            <div class="flex items-center space-x-1.5">
+              <input type="text" id="online-image-url-input" placeholder="Paste image link from internet (https://...jpg) or press Ctrl+V" class="flex-1 bg-slate-950 border border-slate-800 focus:border-sky-500 rounded-lg px-2.5 py-1.5 text-[11px] text-white placeholder:text-slate-600 focus:outline-none transition">
+              <button type="button" onclick="loadOnlineImageUrl()" class="px-2.5 py-1.5 rounded-lg bg-sky-950 hover:bg-sky-900 border border-sky-800 text-[11px] text-sky-300 font-bold flex items-center space-x-1 transition shadow" title="Load online image">
+                <i data-lucide="link" class="w-3 h-3"></i>
+                <span>Load URL</span>
+              </button>
+            </div>
+            <div class="flex justify-between items-center text-[10px] text-slate-500 px-1">
+              <span>Drop file, click box, or press <kbd class="px-1 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">Ctrl+V</kbd> to paste</span>
+              <span id="active-image-source" class="text-sky-400 font-medium">Source: Biofilm Preset</span>
+            </div>
+          </div>
+
+          <!-- Analyze Trigger Buttons -->
+          <button id="btn-snap-camera" onclick="snapLivePhoto()" class="hidden w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-900/30">
+            <i data-lucide="camera" class="w-4 h-4"></i>
+            <span>Snap Live Photo &amp; Analyze</span>
+          </button>
+          <button id="btn-run-analysis" onclick="executeFilterAnalysis()" class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs uppercase tracking-wider transition flex items-center justify-center space-x-2 shadow-lg shadow-sky-900/30">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            <span>Analyze with Gemini 2.0 Flash</span>
+          </button>
+        </div>
+
+        <!-- AI Forensic Results & Two-Tier Escalation Model -->
+        <div id="gemini-result-card" class="bg-slate-950 rounded-xl border border-slate-800 p-4 space-y-3">
           
-          <!-- Image Input & Sample Selector (5 cols) -->
-          <div class="md:col-span-5 space-y-4">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-2">
-              <i data-lucide="camera" class="w-4 h-4 text-sky-400"></i>
-              <span>Pre-Filter Canister Photo</span>
-            </h3>
-
-            <!-- Image Preview Box -->
-            <div id="filter-preview-box" class="h-64 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-950/60 flex flex-col items-center justify-center p-4 relative overflow-hidden group">
-              <img id="filter-preview-img" src="/api/samples/clean_filter.svg" alt="Pre-filter preview" class="max-h-full object-contain filter drop-shadow">
-              <div id="filter-upload-overlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-center p-4">
-                <i data-lucide="upload-cloud" class="w-8 h-8 text-sky-400 mb-2"></i>
-                <p class="text-xs font-semibold text-white">Upload Smartphone Photograph</p>
-                <p class="text-[10px] text-slate-400">Transparent under-sink cartridge canister</p>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+              <span class="text-[10px] text-slate-400 uppercase">Visual Fouling Index</span>
+              <div class="flex items-baseline space-x-1.5 mt-0.5">
+                <span id="res-fouling-score" class="text-2xl font-black text-rose-400">0.84</span>
+                <span class="text-xs text-slate-400">/ 1.00</span>
               </div>
-              <input type="file" id="filter-file-input" accept="image/*" onchange="handleFileUpload(event)" class="absolute inset-0 opacity-0 cursor-pointer">
-            </div>
-
-            <!-- Quick Presets for Demo -->
-            <div>
-              <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Hackathon Test Presets</div>
-              <div class="grid grid-cols-3 gap-2">
-                <button onclick="selectPreset('clean')" class="preset-btn px-2 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-left transition" id="preset-btn-clean">
-                  <div class="w-2 h-2 rounded-full bg-emerald-400 mb-1"></div>
-                  <div class="text-[11px] font-bold text-white leading-tight">Clean</div>
-                  <div class="text-[9px] text-slate-400">New cartridge</div>
-                </button>
-                <button onclick="selectPreset('moderate')" class="preset-btn px-2 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-left transition" id="preset-btn-moderate">
-                  <div class="w-2 h-2 rounded-full bg-amber-400 mb-1"></div>
-                  <div class="text-[11px] font-bold text-white leading-tight">Silt Clogged</div>
-                  <div class="text-[9px] text-slate-400">Standard aging</div>
-                </button>
-                <button onclick="selectPreset('severe')" class="preset-btn px-2 py-2 rounded-xl bg-rose-950/40 hover:bg-rose-950/60 border border-rose-800/80 text-left transition active-preset" id="preset-btn-severe">
-                  <div class="w-2 h-2 rounded-full bg-rose-500 mb-1 animate-ping"></div>
-                  <div class="text-[11px] font-bold text-rose-300 leading-tight">Severe Fouled</div>
-                  <div class="text-[9px] text-rose-400">Min 3 Demo (0.84)</div>
-                </button>
+              <div class="w-full bg-slate-800 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                <div id="res-fouling-bar" class="bg-rose-500 h-full w-[84%]"></div>
               </div>
             </div>
 
-            <!-- Analyze Trigger Button -->
-            <button id="btn-run-analysis" onclick="executeFilterAnalysis()" class="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-sky-500/25 flex items-center justify-center space-x-2">
-              <i data-lucide="sparkles" class="w-4 h-4"></i>
-              <span>Analyze with Gemini 1.5 Pro</span>
-            </button>
+            <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+              <span class="text-[10px] text-slate-400 uppercase">Deposit Detected</span>
+              <div id="res-deposit-badge" class="text-[11px] font-mono font-bold text-amber-400 truncate mt-0.5">POSSIBLE_BIOFILM_ACCUMULATION</div>
+              <div class="mt-1 flex items-center space-x-1">
+                <span class="text-[10px] text-slate-400">Severity:</span>
+                <span id="res-severity-badge" class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-950 text-rose-400 border border-rose-800">ELEVATED</span>
+              </div>
+            </div>
           </div>
 
-          <!-- Multimodal Analysis & Escalation Result (7 cols) -->
-          <div class="md:col-span-7 space-y-4">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-2">
-              <i data-lucide="brain-circuit" class="w-4 h-4 text-emerald-400"></i>
-              <span>Gemini Multimodal Forensic Assessment</span>
-            </h3>
-
-            <!-- AI Output Card -->
-            <div id="gemini-result-card" class="bg-slate-950/90 rounded-2xl border border-slate-800 p-5 space-y-4">
-              
-              <!-- Metrics Row -->
-              <div class="grid grid-cols-2 gap-3">
-                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                  <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Visual Fouling Index</span>
-                  <div class="flex items-baseline space-x-2 mt-1">
-                    <span id="res-fouling-score" class="text-3xl font-black text-rose-400">0.84</span>
-                    <span class="text-xs text-slate-400">/ 1.00</span>
-                  </div>
-                  <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
-                    <div id="res-fouling-bar" class="bg-rose-500 h-full w-[84%]"></div>
-                  </div>
-                </div>
-
-                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                  <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Deposit Indicators</span>
-                  <div id="res-deposit-badge" class="mt-1 text-xs font-bold text-amber-400 font-mono">
-                    POSSIBLE_BIOFILM_ACCUMULATION
-                  </div>
-                  <div class="mt-2 flex items-center space-x-1.5">
-                    <span class="text-[10px] text-slate-400">Severity:</span>
-                    <span id="res-severity-badge" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800">ELEVATED</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Rationale -->
-              <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800/80">
-                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Gemini Forensic Rationale</span>
-                <p id="res-rationale" class="text-xs text-slate-300 leading-relaxed">
-                  High optical opacity with deep reddish-brown iron oxide encrustation and gelatinous, uneven dark surface coating consistent with rapid subterranean biofilm ingress following pipe depressurization.
-                </p>
-              </div>
-
-              <!-- Two-Tier Escalation Model Output -->
-              <div id="escalation-container" class="space-y-3 pt-2 border-t border-slate-800">
-                
-                <!-- Tier 1: Household Maintenance Guidance -->
-                <div class="bg-rose-950/30 border border-rose-800/80 rounded-xl p-3.5">
-                  <div class="flex items-center justify-between text-xs font-bold text-rose-300 mb-1">
-                    <span class="flex items-center space-x-1.5">
-                      <i data-lucide="bell-ring" class="w-4 h-4 text-rose-400"></i>
-                      <span>TIER 1: PRECAUTIONARY HOUSEHOLD ADVISORY</span>
-                    </span>
-                    <span class="px-2 py-0.5 rounded text-[10px] bg-rose-900/80 text-rose-200">ACTION REQUIRED</span>
-                  </div>
-                  <p id="tier1-message" class="text-xs text-rose-100/90 leading-relaxed">
-                    Elevated visual fouling (0.84) matches active subterranean low-pressure ingress risk along your street (WTR-PIPE-4011). Replace your cartridge housing immediately. Boil tap water for 1-2 minutes until utility line flushing completes.
-                  </p>
-                </div>
-
-                <!-- Tier 2: Municipal Utility Escalation -->
-                <div class="bg-amber-950/30 border border-amber-800/80 rounded-xl p-3.5">
-                  <div class="flex items-center justify-between text-xs font-bold text-amber-300 mb-1">
-                    <span class="flex items-center space-x-1.5">
-                      <i data-lucide="radio-tower" class="w-4 h-4 text-amber-400"></i>
-                      <span>TIER 2: UTILITY VERIFICATION ESCALATED</span>
-                    </span>
-                    <span class="px-2 py-0.5 rounded text-[10px] bg-amber-900/80 text-amber-200">DISPATCHED</span>
-                  </div>
-                  <p id="tier2-message" class="text-xs text-amber-100/90 leading-relaxed">
-                    Corridor WTR-PIPE-4011 / SWR-PIPE-802 flagged for physical field crew grab-sampling. Valve VLV-SEC4-WEST-02 queued for disinfectant residual testing and scheduled main flushing.
-                  </p>
-                </div>
-
-              </div>
-
-              <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1">
-                <span id="analysis-source-tag">Source: Gemini 1.5 Pro Forensics Specification</span>
-                <span class="text-emerald-400 font-mono">Response Latency: 310ms</span>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- VIEW 3: 3-MINUTE HACKATHON DEMO BLUEPRINT WALKTHROUGH -->
-    <div id="view-blueprint" class="hidden space-y-6 max-w-5xl mx-auto">
-      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 lg:p-8 shadow-2xl space-y-6">
-        <div>
-          <span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-            DEMONSTRATION BLUEPRINT (PAGE 3 OF SPECIFICATION)
-          </span>
-          <h2 class="text-2xl font-black text-white mt-2">3-Minute Hackathon Presentation Guide</h2>
-          <p class="text-sm text-slate-400">Step-by-step automated workflow designed for the Google Cloud AI Builder Cup presentation pitch.</p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          <!-- Minute 1 Card -->
-          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between hover:border-sky-500/50 transition">
-            <div>
-              <div class="flex items-center justify-between mb-3">
-                <span class="text-xs font-mono font-bold text-sky-400 bg-sky-950 px-2 py-0.5 rounded border border-sky-800">
-                  MIN 1 (00:00 - 01:00)
-                </span>
-                <i data-lucide="power" class="w-5 h-5 text-rose-400"></i>
-              </div>
-              <h3 class="text-base font-bold text-white mb-2">The Trigger Event</h3>
-              <p class="text-xs text-slate-300 leading-relaxed mb-3">
-                <strong class="text-white">Action:</strong> Presenter displays interactive map of Sector 4 and triggers a simulated supply-cycle cessation.
-              </p>
-              <p class="text-xs text-slate-400 leading-relaxed">
-                <strong class="text-slate-300">Result:</strong> Pub/Sub logs operational status change; water lines transition to unpressurized resting state (0.05 bar).
-              </p>
-            </div>
-            <button onclick="demoStep1TriggerEvent()" class="mt-6 w-full py-2.5 rounded-xl bg-slate-900 hover:bg-sky-600 text-slate-200 border border-slate-700 hover:border-sky-500 font-semibold text-xs transition flex items-center justify-center space-x-1.5">
-              <i data-lucide="play" class="w-3.5 h-3.5"></i>
-              <span>Execute Minute 1</span>
-            </button>
-          </div>
-
-          <!-- Minute 2 Card -->
-          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between hover:border-sky-500/50 transition">
-            <div>
-              <div class="flex items-center justify-between mb-3">
-                <span class="text-xs font-mono font-bold text-amber-400 bg-amber-950 px-2 py-0.5 rounded border border-amber-800">
-                  MIN 2 (01:00 - 02:00)
-                </span>
-                <i data-lucide="map-pin" class="w-5 h-5 text-amber-400"></i>
-              </div>
-              <h3 class="text-base font-bold text-white mb-2">Spatial Triaging</h3>
-              <p class="text-xs text-slate-300 leading-relaxed mb-3">
-                <strong class="text-white">Action:</strong> BigQuery GIS computes proximity buffers intersecting unpressurized mains with nearby sewer lines.
-              </p>
-              <p class="text-xs text-slate-400 leading-relaxed">
-                <strong class="text-slate-300">Result:</strong> Map highlights a 180m street corridor with an elevated Intrusion Vulnerability Score (<span class="text-amber-400 font-bold">0.86</span>).
-              </p>
-            </div>
-            <button onclick="demoStep2SpatialTriage()" class="mt-6 w-full py-2.5 rounded-xl bg-slate-900 hover:bg-sky-600 text-slate-200 border border-slate-700 hover:border-sky-500 font-semibold text-xs transition flex items-center justify-center space-x-1.5">
-              <i data-lucide="play" class="w-3.5 h-3.5"></i>
-              <span>Execute Minute 2</span>
-            </button>
-          </div>
-
-          <!-- Minute 3 Card -->
-          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between hover:border-sky-500/50 transition">
-            <div>
-              <div class="flex items-center justify-between mb-3">
-                <span class="text-xs font-mono font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
-                  MIN 3 (02:00 - 03:00)
-                </span>
-                <i data-lucide="scan-eye" class="w-5 h-5 text-emerald-400"></i>
-              </div>
-              <h3 class="text-base font-bold text-white mb-2">Contextual Triage</h3>
-              <p class="text-xs text-slate-300 leading-relaxed mb-3">
-                <strong class="text-white">Action:</strong> Citizen portal opens; presenter uploads photo of an in-service sediment pre-filter cartridge.
-              </p>
-              <p class="text-xs text-slate-400 leading-relaxed">
-                <strong class="text-slate-300">Result:</strong> Gemini flags visual fouling score (<span class="text-rose-400 font-bold">0.84</span>); contextual engine recommends maintenance &amp; flags for utility verification.
-              </p>
-            </div>
-            <button onclick="demoStep3ContextualTriage()" class="mt-6 w-full py-2.5 rounded-xl bg-slate-900 hover:bg-sky-600 text-slate-200 border border-slate-700 hover:border-sky-500 font-semibold text-xs transition flex items-center justify-center space-x-1.5">
-              <i data-lucide="play" class="w-3.5 h-3.5"></i>
-              <span>Execute Minute 3</span>
-            </button>
-          </div>
-
-        </div>
-
-        <!-- Full Pitch Narration Script Drawer -->
-        <div class="bg-slate-950/80 rounded-2xl border border-slate-800 p-5">
-          <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center space-x-2">
-            <i data-lucide="mic" class="w-4 h-4 text-sky-400"></i>
-            <span>Judges Pitch Script &amp; Telemetry Synchronization</span>
-          </h4>
-          <p class="text-xs text-slate-400 leading-relaxed">
-            Clicking any of the step buttons above automatically manipulates the real backend state: Pub/Sub emits the exact payload, BigQuery GIS executes the ST_BUFFER query, and Gemini parses the filter forensics with real-time UI transitions so your presentation is completely synchronized and zero-friction!
+          <!-- Rationale -->
+          <p id="res-rationale" class="text-[11px] text-slate-300 leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80">
+            High optical opacity with deep reddish-brown iron oxide encrustation and gelatinous, uneven dark surface coating consistent with rapid subterranean biofilm ingress following pipe depressurization.
           </p>
-        </div>
-      </div>
-    </div>
 
-    <!-- VIEW 4: JUDGE DEFENSE MATRIX & FAQ -->
-    <div id="view-defense" class="hidden space-y-6 max-w-5xl mx-auto">
-      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 lg:p-8 shadow-2xl space-y-6">
-        <div>
-          <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-            TECHNICAL DEFENSIBILITY (PAGE 4 OF SPECIFICATION)
-          </span>
-          <h2 class="text-2xl font-black text-white mt-2">Technical Defensibility &amp; Judge Defense Matrix</h2>
-          <p class="text-sm text-slate-400">Pre-empting and answering critical architectural and scientific inquiries.</p>
-        </div>
-
-        <!-- Metric Badges Row -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-center">
-            <div class="text-2xl font-black text-sky-400">~1.3B</div>
-            <div class="text-[11px] text-slate-400 mt-1 uppercase tracking-wide">People on IWS Networks (ASCE/PMC)</div>
-          </div>
-          <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-center">
-            <div class="text-2xl font-black text-emerald-400">&lt; 500ms</div>
-            <div class="text-[11px] text-slate-400 mt-1 uppercase tracking-wide">BigQuery Query Target SLA</div>
-          </div>
-          <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-center">
-            <div class="text-2xl font-black text-amber-400">Zero</div>
-            <div class="text-[11px] text-slate-400 mt-1 uppercase tracking-wide">New In-Pipe Hardware Req.</div>
-          </div>
-          <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-center">
-            <div class="text-2xl font-black text-purple-400">2-Tier</div>
-            <div class="text-[11px] text-slate-400 mt-1 uppercase tracking-wide">Strict Escalation Model</div>
-          </div>
-        </div>
-
-        <!-- 3 Core Judge Questions from PDF Page 4 -->
-        <div class="space-y-4">
-          
-          <div class="bg-slate-950 rounded-2xl border border-slate-800 p-5 space-y-2">
-            <div class="flex items-start space-x-3">
-              <span class="w-6 h-6 rounded-lg bg-sky-500/20 text-sky-400 font-bold flex items-center justify-center text-xs flex-shrink-0 mt-0.5">Q1</span>
-              <div>
-                <h4 class="text-sm font-bold text-white">How does this work without complete utility maps?</h4>
-                <p class="text-xs text-slate-300 leading-relaxed mt-1">
-                  <strong class="text-sky-400">Defense:</strong> AquaVigil operates effectively on sparse, incremental data. Street-level pipe corridors follow public road easements readily extracted from OpenStreetMap. Pairing known pump shutoff schedules with public road elevation models establishes baseline drain-down risk before integrating subsurface sewer surveys.
-                </p>
+          <!-- Two-Tier Action (The Core Decision Engine) -->
+          <div id="escalation-container" class="space-y-2 pt-2 border-t border-slate-800">
+            <!-- Tier 1: Household Notice -->
+            <div class="bg-rose-950/30 border border-rose-800/80 rounded-lg p-2.5">
+              <div class="text-[10px] font-bold text-rose-400 uppercase mb-0.5 flex items-center space-x-1">
+                <i data-lucide="bell" class="w-3 h-3"></i>
+                <span>Tier 1: Precautionary Household Advisory</span>
               </div>
+              <p id="tier1-message" class="text-xs text-rose-100/90 leading-tight">
+                Elevated visual fouling (0.84) matches active subterranean ingress along your street (WTR-PIPE-4011). Replace cartridge immediately. Boil tap water for 1-2 minutes until line flushing completes.
+              </p>
             </div>
-          </div>
 
-          <div class="bg-slate-950 rounded-2xl border border-slate-800 p-5 space-y-2">
-            <div class="flex items-start space-x-3">
-              <span class="w-6 h-6 rounded-lg bg-sky-500/20 text-sky-400 font-bold flex items-center justify-center text-xs flex-shrink-0 mt-0.5">Q2</span>
-              <div>
-                <h4 class="text-sm font-bold text-white">Can a smartphone photo trigger a public boil-water alert?</h4>
-                <p class="text-xs text-slate-300 leading-relaxed mt-1">
-                  <strong class="text-sky-400">Defense:</strong> <strong>No.</strong> A single photograph cannot establish microbiological contamination. AquaVigil uses a strict two-tier escalation architecture: Tier 1 flags internal infrastructure corridors for utility inspection; Tier 2 issues precautionary maintenance guidance to households and escalates high-risk cases for utility operational verification. Official public health notices require corroborating operational evidence.
-                </p>
+            <!-- Tier 2: Municipal Utility Dispatch -->
+            <div class="bg-amber-950/30 border border-amber-800/80 rounded-lg p-2.5">
+              <div class="text-[10px] font-bold text-amber-400 uppercase mb-0.5 flex items-center space-x-1">
+                <i data-lucide="radio" class="w-3 h-3"></i>
+                <span>Tier 2: Municipal Utility Escalation</span>
               </div>
-            </div>
-          </div>
-
-          <div class="bg-slate-950 rounded-2xl border border-slate-800 p-5 space-y-2">
-            <div class="flex items-start space-x-3">
-              <span class="w-6 h-6 rounded-lg bg-sky-500/20 text-sky-400 font-bold flex items-center justify-center text-xs flex-shrink-0 mt-0.5">Q3</span>
-              <div>
-                <h4 class="text-sm font-bold text-white">Can Gemini distinguish standard rust from organic biofilm?</h4>
-                <p class="text-xs text-slate-300 leading-relaxed mt-1">
-                  <strong class="text-sky-400">Defense:</strong> Gemini analyzes surface texture, optical opacity, and coating uniformity rather than raw color alone, flagging visual indicators consistent with possible biofilm or organic deposition as an inference rather than a laboratory microbiological assay. The visual fouling score is combined with the BigQuery spatial-risk score to produce a contextual escalation score.
-                </p>
-              </div>
+              <p id="tier2-message" class="text-xs text-amber-100/90 leading-tight">
+                Corridor WTR-PIPE-4011 / SWR-PIPE-802 flagged for field grab-sampling. Valve VLV-SEC4-WEST-02 queued for scheduled flushing.
+              </p>
             </div>
           </div>
 
         </div>
 
       </div>
+
     </div>
 
   </main>
 
-  <!-- BigQuery GIS SQL Inspection Modal -->
-  <div id="sql-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-3xl w-full p-6 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-        <div class="flex items-center space-x-2">
-          <i data-lucide="database" class="w-5 h-5 text-sky-400"></i>
-          <h3 class="text-base font-bold text-white">BigQuery GIS Correlation Query (Page 3 Schema)</h3>
-        </div>
-        <button onclick="closeSqlModal()" class="text-slate-400 hover:text-white">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-      <div class="bg-slate-950 p-4 rounded-xl font-mono text-xs text-sky-300 overflow-x-auto max-h-96 border border-slate-800">
-        <pre id="modal-sql-content">-- Loading SQL query...</pre>
-      </div>
-      <div class="flex items-center justify-between text-xs text-slate-400 pt-2">
-        <span>Formula: ROUND(((5.0 - dist)/5.0)*0.45 + (cond/5.0)*0.35 + 0.20, 2)</span>
-        <button onclick="closeSqlModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- API Key Modal -->
-  <div id="key-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-        <div class="flex items-center space-x-2">
-          <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
-          <h3 class="text-base font-bold text-white">Local AI Mode (No Key Required)</h3>
-        </div>
-        <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-white">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-      <div class="bg-emerald-950/40 border border-emerald-800/80 rounded-xl p-3 text-xs text-emerald-200">
-        ✓ <strong>No API Key Required:</strong> AquaVigil is running in standalone local mode with its built-in multimodal forensic engine. All hackathon demos work 100% offline.
-      </div>
-      <p class="text-xs text-slate-400">
-        Optional: If you ever decide to test live Vertex AI / Google AI Studio calls in the future, you can enter a key below. Otherwise, you can safely close this window.
-      </p>
-      <div>
-        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Optional API Key</label>
-        <input type="password" id="input-gemini-key" placeholder="Leave empty for local mode..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 font-mono">
-      </div>
-      <div class="flex items-center justify-end space-x-2 pt-2">
-        <button onclick="closeApiKeyModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-xl">Cancel</button>
-        <button onclick="saveApiKey()" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-xs text-white font-bold rounded-xl">Save Key</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Footer -->
-  <footer class="bg-slate-900 border-t border-slate-800 py-4 px-6 text-xs text-slate-500 text-center">
-    AquaVigil Platform • Google Cloud AI Builder Cup 2026 • Track: Sustainability &amp; Community Resilience
+  <!-- Clean Footer -->
+  <footer class="bg-slate-900 border-t border-slate-800 py-2.5 px-6 text-center text-xs text-slate-500">
+    AquaVigil Platform • Google Cloud AI Builder Cup 2026 • BigQuery GIS • Cloud Pub/Sub • Vertex AI Gemini
   </footer>
 
   <!-- App Scripts -->
   <script src="/static/js/app.js"></script>
-  <script src="/static/js/hackathon_demo.js"></script>
   <script>
     lucide.createIcons();
   </script>

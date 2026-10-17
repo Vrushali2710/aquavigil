@@ -132,6 +132,40 @@ class PubSubOperationalEngine:
         }
         return self.publish_scada_event(demo_payload)
 
+    def get_live_telemetry_tick(self) -> Dict[str, Any]:
+        """
+        Emits live real-time SCADA operational telemetry.
+        Generates realistic micro-oscillations, live ISO timestamps, and active pressure curves.
+        """
+        now = datetime.datetime.utcnow()
+        import math
+        t = now.timestamp()
+        
+        valve_state = self.valve_states.get("VLV-SEC4-WEST-02", "OPEN")
+        
+        for pipe_id in ["WTR-PIPE-4011", "WTR-PIPE-4012"]:
+            if pipe_id in self.pipe_states:
+                if valve_state == "OPEN":
+                    base = 2.80
+                    oscillation = round(math.sin(t * 0.8) * 0.05 + math.cos(t * 1.5) * 0.02, 2)
+                    self.pipe_states[pipe_id]["pressure_bar"] = round(base + oscillation, 2)
+                    self.pipe_states[pipe_id]["status"] = "PRESSURIZED"
+                else:
+                    noise = round(math.sin(t * 0.5) * 0.01, 2)
+                    self.pipe_states[pipe_id]["pressure_bar"] = round(0.05 + noise, 2)
+                    self.pipe_states[pipe_id]["status"] = "UNPRESSURIZED_RESTING"
+
+        pipe4011 = self.pipe_states.get("WTR-PIPE-4011", {})
+        return {
+            "timestamp": now.isoformat() + "Z",
+            "valve_id": "VLV-SEC4-WEST-02",
+            "actuator_state": valve_state,
+            "residual_pressure_bar": pipe4011.get("pressure_bar", 2.80),
+            "status": pipe4011.get("status", "PRESSURIZED"),
+            "flow_rate_lps": round(42.5 + math.sin(t) * 3.0, 1) if valve_state == "OPEN" else 0.0,
+            "active_depressurizations": list(self.active_depressurizations.keys())
+        }
+
     def get_operational_status(self) -> Dict[str, Any]:
         return {
             "valves": self.valve_states,

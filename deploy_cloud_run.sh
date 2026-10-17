@@ -1,10 +1,28 @@
 #!/bin/bash
 # Google Cloud Run Deployment Script for AquaVigil Platform
 
-PROJECT_ID=${GOOGLE_CLOUD_PROJECT:-""}
-if [ -z "$PROJECT_ID" ]; then
-    echo -n "Enter your Google Cloud Project ID: "
-    read PROJECT_ID
+# Auto-detect JSON key file in current directory
+CRED_FILE=""
+for f in "credentials.json" "gcp_credentials.json" "service_account.json" "key.json"; do
+    if [ -f "$f" ]; then
+        CRED_FILE="$f"
+        break
+    fi
+done
+
+if [ -n "$CRED_FILE" ]; then
+    echo "========================================================"
+    echo "Auto-detected Google Cloud Credentials File: $CRED_FILE"
+    echo "Authenticating gcloud using service account key..."
+    gcloud auth activate-service-account --key-file="$CRED_FILE"
+    PROJECT_ID=$(grep -o '"project_id": "[^"]*' "$CRED_FILE" | grep -o '[^"]*$')
+    export GOOGLE_CLOUD_PROJECT="$PROJECT_ID"
+else
+    PROJECT_ID=${GOOGLE_CLOUD_PROJECT:-""}
+    if [ -z "$PROJECT_ID" ]; then
+        echo -n "Enter your Google Cloud Project ID: "
+        read PROJECT_ID
+    fi
 fi
 
 REGION="us-central1"

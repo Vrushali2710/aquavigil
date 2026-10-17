@@ -1,6 +1,8 @@
 // 3-Minute Hackathon Demo Blueprint Controller
 // Implements Section 5 of the AquaVigil Hackathon Specification
 
+let demoTimer = null;
+
 function showDemoNotification(title, message, color = 'sky') {
   const existing = document.getElementById('demo-toast');
   if (existing) existing.remove();
@@ -106,6 +108,47 @@ async function demoStep3ContextualTriage() {
     "Gemini scored Visual Fouling Index at 0.84. Corroborated with BigQuery 0.86 GIS score -> Tier 1 Household Advisory + Tier 2 Utility Verification Dispatched!",
     "emerald"
   );
+}
+
+// Play Complete 3-Minute Hackathon Demo Automatically
+async function playFullDemo() {
+  const playBtn = document.getElementById('btn-play-full-demo');
+  if (playBtn) {
+    playBtn.disabled = true;
+    playBtn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Playing Demo...</span>`;
+    lucide.createIcons();
+  }
+
+  try {
+    // Step 1: Min 1
+    await demoStep1TriggerEvent();
+    await new Promise(r => setTimeout(r, 4000));
+
+    // Step 2: Min 2
+    await demoStep2SpatialTriage();
+    await new Promise(r => setTimeout(r, 4500));
+
+    // Step 3: Min 3
+    await demoStep3ContextualTriage();
+    await new Promise(r => setTimeout(r, 2000));
+
+    showDemoNotification(
+      "Full Demo Complete! 🎉",
+      "Full 3-Minute Hackathon pitch sequence executed flawlessly. Click 'Export Report' to download the audit brief.",
+      "purple"
+    );
+  } finally {
+    if (playBtn) {
+      playBtn.disabled = false;
+      playBtn.innerHTML = `<i data-lucide="play-circle" class="w-3.5 h-3.5 text-purple-400"></i><span>Auto Play Demo</span>`;
+      lucide.createIcons();
+    }
+  }
+}
+
+// Export Incident Report
+function exportTriageReport() {
+  window.open('/api/escalation/export-report', '_blank');
 }
 
 // Reset Demo State
