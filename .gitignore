@@ -43,9 +43,23 @@ venv.bak/
 
 # Secrets & Keys
 *.pem
-*key*.json
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.env
+.env.*
+!.env.example
 credentials.json
-*.env.local
+*credentials*.json
+*service-account*.json
+*google*service*account*.json
+*key*.json
+*.json
+
+# Exception for example env files
+!*.example
 
 # OS generated files
 .DS_Store
