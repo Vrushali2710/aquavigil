@@ -1461,11 +1461,24 @@ function switchDashboardTab(tabName) {
     sideColumn.classList.toggle('lg:block', isSideVisible);
     sideColumn.style.display = isSideVisible ? '' : 'none';
   }
+  // Hide map in Filter Forensics view (for privacy / focused UI)
+  try {
+    const mapEl = document.getElementById('map');
+    if (mapEl) {
+      if (isForensicsView) {
+        mapEl.style.display = 'none';
+      } else {
+        mapEl.style.display = '';
+      }
+    }
+  } catch (e) { console.error('Error toggling map display for forensics view', e); }
+
   // After switching panels, ensure map is resized when it's visible
   setTimeout(() => {
     try {
       if (window.resizeMapToViewport) window.resizeMapToViewport();
-      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+      const mapEl = document.getElementById('map');
+      if (mapEl && mapEl.style.display !== 'none' && map && typeof map.invalidateSize === 'function') map.invalidateSize();
     } catch (e) { console.error('Error resizing map after tab switch', e); }
   }, 150);
 }
