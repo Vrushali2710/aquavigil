@@ -267,6 +267,7 @@ def fetch_wqp_live_quality(bbox: str = "-74.05,40.70,-73.95,40.80", characterist
             "timestamp": properties.get("ActivityStartDateTime") or properties.get("ActivityStartDate") or datetime.now(timezone.utc).isoformat(),
             "site_name": properties.get("MonitoringLocationName") or properties.get("siteName") or "WQP station",
             "api_url": url,
+
             "message": f"Live WQP {characteristic_name} baseline loaded successfully."
         }
     except Exception as exc:
@@ -1064,6 +1065,63 @@ class AquaVigilHandler(BaseHTTPRequestHandler):
                 self.send_json({"status": "SUCCESS", "message": "Key updated successfully."})
             except Exception as e:
                 self.send_json({"status": "ERROR", "error": str(e)}, 400)
+            return
+
+        # GRACE heatmap (grid-based GeoJSON) - bbox=minLon,minLat,maxLon,maxLat
+        if path.startswith("/api/grace/heatmap"):
+            query = parse_qs(parsed.query)
+            bbox = (query.get('bbox', [''])[0] or '').strip()
+            start = (query.get('start', [None])[0] or None)
+            end = (query.get('end', [None])[0] or None)
+            res = float(query.get('res', ['1.0'])[0] or 1.0)
+            if not bbox:
+                self.send_json({"status": "ERROR", "message": "bbox required"}, 400)
+                return
+            try:
+                out = compute_grace_heatmap(bbox=bbox, start_date=start, end_date=end, resolution_deg=res)
+                self.send_json(out)
+            except Exception as e:
+                logger.warning(f"GRACE heatmap error: {e}")
+                self.send_json({"status": "ERROR", "message": str(e)}, 500)
+            return
+
+        # GRACE timeseries for a point - lat & lon required
+        if path.startswith("/api/grace/timeseries"):
+            query = parse_qs(parsed.query)
+            lat = query.get('lat', [None])[0]
+            lon = query.get('lon', [None])[0]
+            start = (query.get('start', [None])[0] or None)
+            end = (query.get('end', [None])[0] or None)
+            buffer_m = int(query.get('buffer', ['25000'])[0] or 25000)
+            if lat is None or lon is None:
+                self.send_json({"status": "ERROR", "message": "lat and lon required"}, 400)
+                return
+            try:
+                out = compute_grace_timeseries(float(lat), float(lon), start_date=start, end_date=end, buffer_m=buffer_m)
+                self.send_json(out)
+            except Exception as e:
+                logger.warning(f"GRACE timeseries error: {e}")
+                self.send_json({"status": "ERROR", "message": str(e)}, 500)
+            return
+
+        # GRACE drought risk grid - bbox required
+        if path.startswith("/api/grace/drought-risk"):
+            query = parse_qs(parsed.query)
+            bbox = (query.get('bbox', [''])[0] or '').strip()
+            baseline_start = (query.get('baseline_start', [None])[0] or None)
+            baseline_end = (query.get('baseline_end', [None])[0] or None)
+            recent_years = int(query.get('recent_years', ['3'])[0] or 3)
+            threshold_pct = int(query.get('threshold_pct', ['20'])[0] or 20)
+            res = float(query.get('res', ['1.0'])[0] or 1.0)
+            if not bbox:
+                self.send_json({"status": "ERROR", "message": "bbox required"}, 400)
+                return
+            try:
+                out = compute_grace_drought_risk(bbox=bbox, baseline_start=baseline_start, baseline_end=baseline_end, recent_years=recent_years, threshold_pct=threshold_pct, resolution_deg=res)
+                self.send_json(out)
+            except Exception as e:
+                logger.warning(f"GRACE drought-risk error: {e}")
+                self.send_json({"status": "ERROR", "message": str(e)}, 500)
             return
 
         self.send_error(404, "Not Found")

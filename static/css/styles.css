@@ -267,6 +267,31 @@ body.theme-dark .leaflet-container {
   background-color: #0f172a !important;
 }
 
+/* GRACE control styling */
+.grace-control {
+  border: 1px solid rgba(148,163,184,0.06);
+  color: #e2e8f0;
+  font-family: inherit;
+}
+.grace-control .btn-grace-heat,
+.grace-control .btn-grace-drought {
+  background: linear-gradient(180deg, rgba(15,23,42,0.9), rgba(4,8,15,0.9));
+  color: #e2e8f0;
+  border: 1px solid rgba(71,85,105,0.12);
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.grace-control .btn-grace-heat:hover,
+.grace-control .btn-grace-drought:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(2,6,23,0.6);
+}
+.grace-control input[type="checkbox"] {
+  transform: scale(1.05);
+  margin-right: 6px;
+}
+
 body.theme-light #auth-modal {
   background: rgba(15, 118, 110, 0.08) !important;
 }

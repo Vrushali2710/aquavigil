@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
   switchDashboardTab('ingestion');
   initMap();
   loadNetworkTopology();
+  addGraceControls();
   loadUsgsWaterContext();
   loadWqpQualityContext();
   refreshScadaStatus();
@@ -1727,4 +1728,172 @@ function useLiveGpsCorridor() {
       lucide.createIcons();
     }
   });
+}
+
+// GRACE layers and controls
+let graceHeatmapLayer = null;
+let graceDroughtLayer = null;
+let graceTimeseriesEnabled = false;
+
+function hexForValue(v) {
+  if (v === null || v === undefined) return '#000000';
+  // simple diverging palette: brown (depletion) -> white -> blue (gain)
+  const val = Number(v);
+  if (!Number.isFinite(val)) return '#1f2937';
+  const min = -150; const max = 150; // typical GRACE lwe mm ranges
+  const p = Math.max(0, Math.min(1, (val - min) / (max - min)));
+  const r = Math.round(255 * (1 - p));
+  const g = Math.round(255 * (1 - Math.abs(p - 0.5) * 2));
+  const b = Math.round(255 * p);
+  return `rgb(${r},${g},${b})`;
+}
+
+function addGraceControls() {
+  if (!map) return;
+  const GraceControl = L.Control.extend({
+    onAdd: function() {
+      const container = L.DomUtil.create('div', 'leaflet-bar grace-control p-2');
+      container.style.background = 'rgba(14, 23, 42, 0.85)';
+      container.style.padding = '6px';
+      container.style.borderRadius = '8px';
+      container.style.boxShadow = '0 6px 18px rgba(2,6,23,0.6)';
+
+      const btnHeat = L.DomUtil.create('button', 'btn-grace-heat text-xs', container);
+      btnHeat.textContent = 'GRACE Heatmap';
+      btnHeat.style.display = 'block';
+      btnHeat.style.marginBottom = '6px';
+
+      const btnDrought = L.DomUtil.create('button', 'btn-grace-drought text-xs', container);
+      btnDrought.textContent = 'Drought Risk';
+      btnDrought.style.display = 'block';
+      btnDrought.style.marginBottom = '6px';
+
+      const chk = L.DomUtil.create('label', 'text-xs', container);
+      chk.style.display = 'block';
+      chk.innerHTML = `<input type="checkbox" id="grace-timeseries-toggle" style="margin-right:6px"> Click→Timeseries`;
+
+      L.DomEvent.disableClickPropagation(container);
+
+      btnHeat.onclick = async () => {
+        try {
+          const bounds = map.getBounds();
+          const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+          const res = await fetch(`/api/grace/heatmap?bbox=${encodeURIComponent(bbox)}&res=1.0`);
+          const data = await res.json();
+          if (data.status !== 'SUCCESS') { addNotification({ title: 'GRACE heatmap', message: data.message || 'No data', level: 'warning' }); return; }
+          if (graceHeatmapLayer) map.removeLayer(graceHeatmapLayer);
+          graceHeatmapLayer = L.geoJSON({ type: 'FeatureCollection', features: data.features }, {
+            style: (f) => ({ color: hexForValue(f.properties.value), weight: 1, fillOpacity: 0.65 }),
+            onEachFeature: (f, layer) => {
+              layer.bindPopup(`<div class="text-xs">Value: <strong>${f.properties.value ?? 'NA'}</strong></div>`);
+            }
+          }).addTo(map);
+          addNotification({ title: 'GRACE heatmap', message: `Loaded ${data.count} cells`, level: 'success' });
+        } catch (e) { console.error(e); addNotification({ title: 'GRACE failed', message: e.message || String(e), level: 'danger' }); }
+      };
+
+      btnDrought.onclick = async () => {
+        try {
+          const bounds = map.getBounds();
+          const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+          const res = await fetch(`/api/grace/drought-risk?bbox=${encodeURIComponent(bbox)}&res=1.0`);
+          const data = await res.json();
+          if (data.status !== 'SUCCESS') { addNotification({ title: 'Drought risk', message: data.message || 'No data', level: 'warning' }); return; }
+          if (graceDroughtLayer) map.removeLayer(graceDroughtLayer);
+          graceDroughtLayer = L.geoJSON({ type: 'FeatureCollection', features: data.features }, {
+            style: (f) => ({ color: f.properties.flagged ? '#b91c1c' : '#0ea5a4', weight: 1, fillOpacity: f.properties.flagged ? 0.7 : 0.25 }),
+            onEachFeature: (f, layer) => {
+              layer.bindPopup(`<div class="text-xs">Recent: ${f.properties.recent_mean ?? 'NA'}<br>Baseline: ${f.properties.baseline_mean ?? 'NA'}<br>Flagged: ${f.properties.flagged}</div>`);
+            }
+          }).addTo(map);
+          addNotification({ title: 'Drought risk', message: `Loaded ${data.count} cells`, level: 'success' });
+        } catch (e) { console.error(e); addNotification({ title: 'Drought failed', message: e.message || String(e), level: 'danger' }); }
+      };
+
+      const toggle = container.querySelector('#grace-timeseries-toggle');
+      toggle.addEventListener('change', (ev) => { graceTimeseriesEnabled = ev.target.checked; if (graceTimeseriesEnabled) addNotification({ title: 'Timeseries', message: 'Click on map to fetch GRACE timeseries', level: 'info' }); });
+
+      return container;
+    }
+  });
+
+  map.addControl(new GraceControl({ position: 'topright' }));
+
+  // map click handler for timeseries
+  map.on('click', async (e) => {
+    if (!graceTimeseriesEnabled) return;
+    try {
+      const lat = e.latlng.lat, lon = e.latlng.lng;
+      const res = await fetch(`/api/grace/timeseries?lat=${lat}&lon=${lon}`);
+      const data = await res.json();
+      if (data.status !== 'SUCCESS') { addNotification({ title: 'Timeseries', message: data.message || 'No data', level: 'warning' }); return; }
+      showGraceSeriesModal(lat, lon, data.series);
+    } catch (err) { console.error(err); addNotification({ title: 'Timeseries failed', message: err.message || String(err), level: 'danger' }); }
+  });
+}
+
+function showGraceSeriesModal(lat, lon, series) {
+  const existing = document.getElementById('grace-series-modal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'grace-series-modal';
+  modal.className = 'fixed inset-0 z-50 flex items-center justify-center';
+
+  const labels = series.map(s => s.date);
+  const values = series.map(s => (s.value === null || s.value === undefined) ? null : Number(s.value));
+
+  modal.innerHTML = `
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 w-[640px] max-h-[80vh] overflow-auto">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-sm font-bold">GRACE Timeseries (${lat.toFixed(4)}, ${lon.toFixed(4)})</div>
+        <button id="grace-series-close" class="text-xs px-2 py-1 rounded bg-slate-800">Close</button>
+      </div>
+      <div class="text-xs text-slate-300 mb-2">Showing ${series.length} observations (most recent last)</div>
+      <div class="mb-3"><canvas id="grace-series-canvas" width="600" height="260"></canvas></div>
+      <div class="text-[12px] font-mono leading-tight text-slate-300 hide-scroll">${series.map(s => `${s.date} -> ${s.value}`).join('<br/>')}</div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeBtn = document.getElementById('grace-series-close');
+  closeBtn.addEventListener('click', () => {
+    const c = document.getElementById('grace-series-canvas');
+    if (c && c._chart) { try { c._chart.destroy(); } catch (e) {} }
+    modal.remove();
+  });
+
+  // Render Chart.js timeseries
+  try {
+    const ctx = document.getElementById('grace-series-canvas').getContext('2d');
+    const cfg = {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'GRACE LWE (approx)',
+          data: values,
+          borderColor: 'rgba(56, 189, 248, 0.95)',
+          backgroundColor: 'rgba(6, 182, 212, 0.12)',
+          pointRadius: 2,
+          borderWidth: 2,
+          spanGaps: true
+        }]
+      },
+      options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        scales: {
+          x: { display: true, ticks: { color: '#cbd5e1', maxRotation: 45, minRotation: 0 } },
+          y: { display: true, ticks: { color: '#cbd5e1' } }
+        },
+        plugins: { legend: { labels: { color: '#cbd5e1' } } }
+      }
+    };
+    const chart = new Chart(ctx, cfg);
+    const canvasEl = document.getElementById('grace-series-canvas');
+    canvasEl._chart = chart;
+  } catch (err) {
+    console.warn('Chart rendering failed', err);
+  }
 }
