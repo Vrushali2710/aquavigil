@@ -310,6 +310,7 @@ function applyRoleBasedUI(user) {
     btn.classList.toggle('opacity-50', isLocked);
     btn.classList.toggle('cursor-not-allowed', isLocked);
     btn.title = isLocked ? 'Municipal operators only' : btn.dataset.originalTitle || btn.title;
+    btn.setAttribute('aria-disabled', String(isLocked));
   });
 
   const authBtn = document.getElementById('auth-button');
