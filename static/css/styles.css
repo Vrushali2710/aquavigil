@@ -1,5 +1,44 @@
 /* AquaVigil Modern Dark Theme & GIS Styling */
 
+.architecture-inspector-panel {
+  box-shadow: 0 26px 70px rgba(2, 6, 23, 0.72);
+}
+
+.inspector-tab {
+  letter-spacing: 0.01em;
+  transition: all 0.2s ease;
+}
+
+.inspector-stat,
+.inspector-body {
+  box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.08);
+}
+
+#architecture-modal {
+  z-index: 2000 !important;
+}
+
+#architecture-modal .architecture-inspector-panel {
+  position: relative;
+  z-index: 2001;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+body.modal-open .leaflet-control-container,
+body.modal-open .leaflet-top,
+body.modal-open .leaflet-left,
+body.modal-open .leaflet-right,
+body.modal-open .leaflet-bottom,
+body.modal-open .leaflet-control-zoom {
+  z-index: 0 !important;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 @keyframes pulseGlow {
   0%, 100% {
     opacity: 0.85;
@@ -59,6 +98,40 @@
 .active-preset {
   border-color: #f43f5e !important;
   background-color: rgba(136, 19, 55, 0.3) !important;
+}
+
+.notification-toast {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 60;
+  width: min(360px, calc(100vw - 2rem));
+  pointer-events: auto;
+}
+
+.notification-card {
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.45);
+}
+
+.notification-card[data-level="info"] {
+  border-color: rgba(59, 130, 246, 0.45);
+  background: rgba(15, 23, 42, 0.92);
+}
+
+.notification-card[data-level="success"] {
+  border-color: rgba(16, 185, 129, 0.5);
+  background: rgba(5, 46, 22, 0.9);
+}
+
+.notification-card[data-level="warning"] {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(69, 26, 3, 0.9);
+}
+
+.notification-card[data-level="danger"] {
+  border-color: rgba(244, 63, 94, 0.55);
+  background: rgba(69, 10, 10, 0.9);
 }
 
 /* Scrollbars */

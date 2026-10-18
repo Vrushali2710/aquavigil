@@ -8,11 +8,11 @@ class Settings:
     APP_NAME: str = "AquaVigil Platform"
     APP_VERSION: str = "1.0.0"
     TRACK: str = "Sustainability & Community Resilience"
-    PORT: int = int(os.getenv("PORT", "8080"))
+    PORT: int = int(os.getenv("PORT", "8081"))
     HOST: str = os.getenv("HOST", "0.0.0.0")
     
     # Defaults
-    GOOGLE_CLOUD_PROJECT: str = os.getenv("GOOGLE_CLOUD_PROJECT", "aquavigil-cloud-run")
+    GOOGLE_CLOUD_PROJECT: str = os.getenv("GOOGLE_CLOUD_PROJECT", "project-468c1498-16f8-4b24-98a")
     BIGQUERY_DATASET: str = os.getenv("BIGQUERY_DATASET", "aquavigil_dataset")
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     VERTEX_AI_LOCATION: str = os.getenv("VERTEX_AI_LOCATION", "us-central1")

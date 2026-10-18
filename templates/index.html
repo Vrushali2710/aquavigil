@@ -18,6 +18,56 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-sky-500 selection:text-white">
 
+  <div id="role-banner" class="hidden border-b border-slate-800 bg-slate-950/80 px-4 py-2 text-center text-[10px] uppercase tracking-[0.25em] text-sky-300">
+    Municipal operator console active
+  </div>
+
+  <div id="auth-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm">
+    <div class="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-sky-900/20">
+      <div class="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+        <div>
+          <div class="text-[10px] uppercase tracking-[0.2em] text-sky-400">AquaVigil access</div>
+          <div class="text-sm font-bold text-white">Citizen & Municipal sign in</div>
+        </div>
+        <button type="button" onclick="closeAuthModal()" class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-300">Close</button>
+      </div>
+
+      <div class="flex border-b border-slate-800 px-2 py-2">
+        <button type="button" data-auth-tab="login" class="auth-tab flex-1 rounded-xl px-3 py-2 text-xs font-bold text-sky-300 bg-sky-950 border border-sky-800">Login</button>
+        <button type="button" data-auth-tab="signup" class="auth-tab flex-1 rounded-xl px-3 py-2 text-xs font-bold text-slate-300 bg-slate-950 border border-slate-800 ml-2">Sign up</button>
+      </div>
+
+      <div class="p-4 space-y-4">
+        <div class="flex gap-2">
+          <button type="button" data-auth-role="citizen" class="auth-role-btn flex-1 rounded-xl border border-emerald-800 bg-emerald-950/60 px-3 py-2 text-xs font-bold text-emerald-300 active">Citizen</button>
+          <button type="button" data-auth-role="municipal" class="auth-role-btn flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-300">Municipal</button>
+        </div>
+
+        <form id="auth-form" class="space-y-3">
+          <div id="auth-name-wrap" class="hidden">
+            <label class="block text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-1">Full name</label>
+            <input id="auth-name" type="text" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white" placeholder="Aisha Kumar">
+          </div>
+          <div>
+            <label class="block text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-1">Email</label>
+            <input id="auth-email" type="email" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white" placeholder="name@example.com">
+          </div>
+          <div>
+            <label class="block text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-1">Password</label>
+            <input id="auth-password" type="password" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white" placeholder="Enter password">
+          </div>
+          <div id="auth-agency-wrap" class="hidden">
+            <label class="block text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-1">Agency</label>
+            <input id="auth-agency" type="text" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white" placeholder="Water Utility Department">
+          </div>
+          <div id="auth-message" class="hidden rounded-lg border border-amber-800 bg-amber-950/40 px-3 py-2 text-[11px] text-amber-200"></div>
+          <button type="submit" id="auth-submit" class="w-full rounded-xl bg-sky-600 hover:bg-sky-500 px-3 py-2.5 text-sm font-bold text-white">Login</button>
+          <button type="button" id="auth-reset-trigger" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-300">Forgot password?</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- Production Engineering Header -->
   <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 sticky top-0 z-40 backdrop-blur-md bg-slate-900/90">
     <div class="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -36,6 +86,10 @@
       
       <!-- Top Action Toolbar -->
       <div class="flex items-center space-x-2.5">
+        <button id="auth-button" onclick="openAuthModal()" class="px-3 py-1.5 rounded-xl bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 font-semibold text-xs flex items-center space-x-1.5 transition shadow">
+          <i data-lucide="user-round" class="w-3.5 h-3.5 text-sky-400"></i>
+          <span>Login / Sign up</span>
+        </button>
         <button onclick="openArchitectureModal('bigquery')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 font-semibold text-xs flex items-center space-x-1.5 transition shadow">
           <i data-lucide="layers" class="w-3.5 h-3.5 text-sky-400"></i>
           <span>Architecture &amp; Telemetry Inspector</span>
@@ -47,6 +101,30 @@
       </div>
     </div>
   </header>
+
+  <div id="municipal-only-panel" class="hidden max-w-7xl w-full mx-auto mt-4 px-4 lg:px-6">
+    <div class="rounded-2xl border border-sky-800 bg-sky-950/30 p-3 text-sm text-sky-200 shadow-lg shadow-sky-900/20">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="briefcase-business" class="w-4 h-4 text-sky-300"></i>
+          <span class="font-bold">Municipal operator view</span>
+        </div>
+        <span class="rounded-full border border-sky-700 bg-sky-900/50 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-sky-200">Dispatch & maintenance console</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="citizen-only-panel" class="hidden max-w-7xl w-full mx-auto mt-4 px-4 lg:px-6">
+    <div class="rounded-2xl border border-emerald-800 bg-emerald-950/30 p-3 text-sm text-emerald-200 shadow-lg shadow-emerald-900/20">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="house" class="w-4 h-4 text-emerald-300"></i>
+          <span class="font-bold">Citizen support view</span>
+        </div>
+        <span class="rounded-full border border-emerald-700 bg-emerald-900/40 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-emerald-200">Report issue & monitor water safety</span>
+      </div>
+    </div>
+  </div>
 
   <!-- Main Unified Engineering Workspace -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -62,7 +140,7 @@
             <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Valve Event Ingestion (Cloud Pub/Sub)</h2>
             <span class="flex items-center space-x-1.5 px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-mono">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-              <span id="live-telemetry-badge">LIVE SCADA STREAM</span>
+              <span id="live-telemetry-badge">LIVE SCADA STREAM (SIMULATED)</span>
             </span>
           </div>
           <span id="live-clock" class="text-[11px] font-mono text-slate-400">Live UTC</span>
@@ -124,9 +202,9 @@
             <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Subterranean Network-Topology Risk Layer (BigQuery GIS)</h2>
           </div>
           <div class="flex items-center space-x-2">
-            <button onclick="openArchitectureModal('bigquery')" class="px-2 py-0.5 rounded bg-slate-950 hover:bg-slate-800 text-[10px] text-amber-400 border border-slate-700 font-medium flex items-center space-x-1" title="View real BigQuery GIS SQL statement">
+            <button onclick="openArchitectureModal('bigquery')" class="px-2 py-0.5 rounded bg-slate-950 hover:bg-slate-800 text-[10px] text-amber-400 border border-slate-700 font-medium flex items-center space-x-1" title="Open spatial analytics summary">
               <i data-lucide="database" class="w-3 h-3"></i>
-              <span>SQL Query</span>
+              <span>Data Model</span>
             </button>
             <button onclick="useLiveGpsCorridor()" class="px-2 py-0.5 rounded bg-slate-950 hover:bg-slate-800 text-[10px] text-sky-400 border border-slate-700 font-medium flex items-center space-x-1" title="Query Live OpenStreetMap vectors for current location">
               <i data-lucide="crosshair" class="w-3 h-3"></i>
@@ -153,7 +231,7 @@
         <div class="mt-3 grid grid-cols-3 gap-2">
           <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
             <div class="text-[10px] text-slate-400 uppercase">Query Latency</div>
-            <div id="metric-latency" class="mt-1 text-sm font-black text-sky-400">-- ms</div>
+            <div id="metric-latency" class="mt-1 text-sm font-black text-sky-400"></div>
           </div>
           <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
             <div class="text-[10px] text-slate-400 uppercase">Highest Risk</div>
@@ -168,9 +246,74 @@
         <!-- Leaflet Map Canvas -->
         <div id="map" class="w-full h-80 lg:h-96 rounded-xl overflow-hidden relative border border-slate-800 bg-slate-950 mt-3"></div>
 
+        <div class="mt-3 grid grid-cols-3 gap-2 text-[11px] text-slate-300">
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+            <div class="text-[10px] text-slate-400 uppercase">Corridor length</div>
+            <div id="corridor-length-label" class="mt-1 font-bold text-sky-300"></div>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+            <div class="text-[10px] text-slate-400 uppercase">OSM baseline</div>
+            <div id="osm-baseline-label" class="mt-1 font-bold text-emerald-300"></div>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+            <div class="text-[10px] text-slate-400 uppercase">Elevation</div>
+            <div id="elevation-baseline-label" class="mt-1 font-bold text-amber-300"></div>
+          </div>
+        </div>
+
         <div class="mt-3 text-[11px] text-slate-300 bg-slate-950 border border-slate-800 rounded-xl p-2.5">
           <span class="text-slate-400">Live corridor narrative:</span>
-          <span id="metric-threat-summary" class="ml-1 text-emerald-300">All potable lines pressurized</span>
+          <span id="metric-threat-summary" class="ml-1 text-emerald-300"></span>
+        </div>
+
+        <div class="mt-3 bg-slate-950 border border-slate-800 rounded-xl p-3">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] uppercase tracking-[0.18em] text-slate-400">USGS Water Feed</span>
+            <span id="usgs-feed-status" class="rounded-full border border-slate-700 bg-slate-950/40 px-2 py-0.5 text-[9px] font-bold text-slate-400"></span>
+          </div>
+          <div class="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+            <div class="rounded-lg border border-slate-800 bg-slate-900 p-2">
+              <div class="text-[9px] uppercase text-slate-500">Station</div>
+              <div id="usgs-site-name" class="mt-1 font-bold text-sky-300"></div>
+            </div>
+            <div class="rounded-lg border border-slate-800 bg-slate-900 p-2">
+              <div class="text-[9px] uppercase text-slate-500">Streamflow</div>
+              <div id="usgs-streamflow" class="mt-1 font-bold text-emerald-300"></div>
+            </div>
+            <div class="rounded-lg border border-slate-800 bg-slate-900 p-2">
+              <div class="text-[9px] uppercase text-slate-500">Parameter</div>
+              <div id="usgs-parameter" class="mt-1 font-bold text-amber-300"></div>
+            </div>
+            <div class="rounded-lg border border-slate-800 bg-slate-900 p-2">
+              <div class="text-[9px] uppercase text-slate-500">Timestamp</div>
+              <div id="usgs-timestamp" class="mt-1 font-mono text-xs text-slate-200"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3 bg-slate-950 border border-slate-800 rounded-xl p-3">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] uppercase tracking-[0.18em] text-slate-400">WQP Baseline</span>
+            <span id="wqp-feed-status" class="rounded-full border border-slate-700 bg-slate-950/40 px-2 py-0.5 text-[9px] font-bold text-slate-400"></span>
+          </div>
+          <div class="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+            <div class="rounded-lg border border-slate-800 bg-slate-900 p-2">
+              <div class="text-[9px] uppercase text-slate-500">Station</div>
+              <div id="wqp-station-id" class="mt-1 font-bold text-sky-300"></div>
+            </div>
+            <div class="rounded-lg border border-slate-800 bg-slate-900 p-2">
+              <div class="text-[9px] uppercase text-slate-500">Turbidity</div>
+              <div id="wqp-turbidity" class="mt-1 font-bold text-amber-300"></div>
+            </div>
+            <div class="rounded-lg border border-slate-800 bg-slate-900 p-2">
+              <div class="text-[9px] uppercase text-slate-500">Characteristic</div>
+              <div id="wqp-characteristic" class="mt-1 font-bold text-emerald-300"></div>
+            </div>
+            <div class="rounded-lg border border-slate-800 bg-slate-900 p-2">
+              <div class="text-[9px] uppercase text-slate-500">Timestamp</div>
+              <div id="wqp-timestamp" class="mt-1 font-mono text-xs text-slate-200"></div>
+            </div>
+          </div>
         </div>
 
         <!-- BigQuery GIS Proximity Results Card -->
@@ -183,6 +326,17 @@
             <span class="text-[10px] text-slate-500 font-mono">S2 Spatial Join SLA: &lt;500ms</span>
           </div>
         </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
+          <div class="flex items-center space-x-2">
+            <span class="w-5 h-5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold flex items-center justify-center">N</span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Operational Notifications</h2>
+          </div>
+          <button id="btn-dismiss-all" onclick="dismissAllNotifications()" class="text-[10px] text-slate-400 hover:text-white">Clear all</button>
+        </div>
+        <div id="notification-center" class="space-y-2"></div>
       </div>
 
     </div>
@@ -229,15 +383,16 @@
                 <i data-lucide="upload" class="w-3 h-3"></i>
                 <span>Upload</span>
               </button>
-              <button onclick="selectPreset('clean')" class="preset-btn px-2 py-1 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[10px] text-slate-300 font-medium" id="preset-btn-clean">Clean</button>
-              <button onclick="selectPreset('moderate')" class="preset-btn px-2 py-1 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[10px] text-slate-300 font-medium" id="preset-btn-moderate">Silt</button>
-              <button onclick="selectPreset('severe')" class="preset-btn px-2 py-1 rounded bg-rose-950/40 border border-rose-800 text-[10px] text-rose-300 font-bold active-preset" id="preset-btn-severe">Biofilm (0.84)</button>
+              <button type="button" onclick="showFilterInfo()" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] text-amber-300 font-bold flex items-center justify-center" id="preset-btn-info" title="How the pre-filter actually works">
+                <i data-lucide="info" class="w-3 h-3"></i>
+              </button>
+              <button type="button" onclick="selectPreset(null)" class="preset-btn px-2 py-1 rounded bg-slate-900 border border-slate-700 text-[10px] text-slate-300 font-bold" id="preset-btn-severe">Upload live image</button>
             </div>
           </div>
 
           <!-- Photo Preview Box -->
           <div id="filter-preview-box" class="h-44 rounded-xl border border-slate-800 bg-slate-950 flex items-center justify-center p-2 relative overflow-hidden group cursor-pointer" onclick="document.getElementById('filter-file-input').click()" title="Click to upload an image from your computer">
-            <img id="filter-preview-img" src="/api/samples/severe_biofilm_rust_filter.svg" alt="Pre-filter preview" class="max-h-full object-contain filter drop-shadow">
+            <img id="filter-preview-img" alt="Awaiting live image upload" class="max-h-full object-contain filter drop-shadow opacity-60">
             <video id="live-camera-feed" class="hidden w-full h-full object-cover rounded-lg" autoplay playsinline></video>
             <canvas id="camera-canvas" class="hidden"></canvas>
             <input type="file" id="filter-file-input" accept="image/*" onchange="handleFileUpload(event)" class="hidden">
@@ -247,13 +402,21 @@
             </div>
           </div>
 
+          <div id="filter-info-panel" class="hidden rounded-xl border border-sky-800 bg-sky-950/20 p-3 text-[11px] text-slate-200 leading-relaxed">
+            <div class="flex items-center gap-2 text-sky-300 font-bold mb-1.5">
+              <i data-lucide="info" class="w-3.5 h-3.5"></i>
+              <span>How the pre-filter works</span>
+            </div>
+            <p>Water enters the canister and passes through a porous barrier. As sediment, mineral scale, and biofilm collect, the flow resistance rises and the pressure differential increases. AquaVigil inspects the filter image to estimate fouling severity and correlate it with upstream network risk.</p>
+          </div>
+
           <!-- Dedicated Upload Action Bar -->
           <div class="flex items-center justify-between bg-slate-950 px-3 py-2 rounded-xl border border-slate-800">
             <button type="button" onclick="document.getElementById('filter-file-input').click()" class="py-1 px-3 rounded-lg bg-sky-950 hover:bg-sky-900 border border-sky-800 text-sky-300 font-bold text-xs flex items-center space-x-1.5 transition shadow">
               <i data-lucide="upload" class="w-3.5 h-3.5"></i>
               <span>Upload Image File</span>
             </button>
-            <span id="active-image-source" class="text-[11px] text-slate-400 font-mono truncate max-w-[220px]">Biofilm Preset (0.84)</span>
+            <span id="active-image-source" class="text-[11px] text-slate-400 font-mono truncate max-w-[220px]">Awaiting live upload</span>
           </div>
 
           <!-- Analyze Trigger Buttons -->
@@ -269,6 +432,13 @@
 
         <!-- AI Forensic Results & Two-Tier Escalation Model -->
         <div id="gemini-result-card" class="bg-slate-950 rounded-xl border border-slate-800 p-4 space-y-3">
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-2.5">
+            <div class="text-[10px] uppercase text-slate-400">Contextual escalation score</div>
+            <div class="mt-1 flex items-baseline justify-between">
+              <span id="contextual-escalation-score" class="text-2xl font-black text-amber-300">0.00</span>
+              <span id="contextual-score-label" class="text-[10px] text-slate-400">Composite 0.55/0.45 model</span>
+            </div>
+          </div>
           
           <div class="grid grid-cols-2 gap-2">
             <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
@@ -351,6 +521,15 @@
 
         </div>
 
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2 mt-3">
+          <div class="text-[10px] uppercase tracking-[0.18em] text-slate-400">Citizen observations</div>
+          <textarea id="household-observation-text" rows="2" class="w-full bg-slate-950 text-slate-100 rounded-lg border border-slate-700 p-2 text-[11px]" placeholder="Example: brown discoloration, chlorine smell, pressure drop, or visible sediment in the filter."></textarea>
+          <div class="flex items-center justify-between gap-2">
+            <button type="button" onclick="submitHouseholdObservation()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold">Send observation</button>
+            <div id="observation-feedback" class="text-[10px] text-slate-400">Awaiting report</div>
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -363,180 +542,96 @@
   </footer>
 
   <!-- Technical Architecture & Telemetry Inspector Modal -->
-  <div id="architecture-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+  <div id="architecture-modal" class="hidden fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4" aria-hidden="true">
+    <div class="architecture-inspector-panel bg-slate-900 border border-slate-800 w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[82vh] ring-1 ring-slate-700/60">
       
-      <!-- Modal Header -->
-      <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
-        <div class="flex items-center space-x-2">
-          <div class="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/65">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-xl bg-sky-500/15 text-sky-400 flex items-center justify-center border border-sky-500/20">
             <i data-lucide="layers" class="w-4 h-4"></i>
           </div>
           <div>
-            <h3 class="text-sm font-bold text-white">Google Cloud Architecture &amp; Telemetry Inspector</h3>
-            <p class="text-[10px] text-slate-400">Underlying distributed cloud services, spatial join plans, and fluid mechanics formulation</p>
+            <h3 class="text-sm font-bold text-white leading-tight">Google Cloud Architecture &amp; Telemetry Inspector</h3>
+            <p class="text-[10px] text-slate-400 mt-0.5">Operational intelligence overview</p>
           </div>
         </div>
-        <button onclick="closeArchitectureModal()" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 flex items-center justify-center">
+        <button onclick="closeArchitectureModal()" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center border border-slate-700 transition">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
-      <!-- Modal Tabs -->
       <div class="flex border-b border-slate-800 bg-slate-950/40 px-4 text-xs font-semibold">
-        <button onclick="switchModalTab('bigquery')" id="tab-btn-bigquery" class="py-2.5 px-3 border-b-2 border-sky-400 text-sky-400 flex items-center space-x-1.5">
-          <i data-lucide="database" class="w-3.5 h-3.5"></i>
-          <span>BigQuery GIS (Spatial)</span>
+        <button onclick="switchModalTab('bigquery')" id="tab-btn-bigquery" class="inspector-tab py-2.5 px-3 border-b-2 border-sky-400 text-sky-400 flex items-center space-x-1.5">
+          <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
+          <span>System Overview</span>
         </button>
-        <button onclick="switchModalTab('pubsub')" id="tab-btn-pubsub" class="py-2.5 px-3 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center space-x-1.5">
-          <i data-lucide="radio" class="w-3.5 h-3.5"></i>
-          <span>Cloud Pub/Sub (Event)</span>
+        <button onclick="switchModalTab('pubsub')" id="tab-btn-pubsub" class="inspector-tab py-2.5 px-3 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center space-x-1.5">
+          <i data-lucide="bell-ring" class="w-3.5 h-3.5"></i>
+          <span>Response Flow</span>
         </button>
-        <button onclick="switchModalTab('gemini')" id="tab-btn-gemini" class="py-2.5 px-3 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center space-x-1.5">
+        <button onclick="switchModalTab('gemini')" id="tab-btn-gemini" class="inspector-tab py-2.5 px-3 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center space-x-1.5">
           <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-          <span>Gemini 2.0 Flash (Multimodal)</span>
-        </button>
-        <button onclick="switchModalTab('hydraulics')" id="tab-btn-hydraulics" class="py-2.5 px-3 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center space-x-1.5">
-          <i data-lucide="activity" class="w-3.5 h-3.5"></i>
-          <span>Fluid Mechanics Formulation</span>
+          <span>Insights</span>
         </button>
       </div>
 
-      <!-- Tab Contents -->
       <div class="p-4 overflow-y-auto space-y-3 flex-1 text-xs">
-        
-        <!-- BigQuery GIS Tab -->
+
         <div id="tab-content-bigquery" class="space-y-3">
           <div class="grid grid-cols-3 gap-2">
-            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-              <span class="text-[10px] text-slate-500 uppercase">Spatial Index</span>
-              <div class="font-mono text-sky-400 font-bold mt-0.5">S2 Geometry (Level 14)</div>
+            <div class="inspector-stat bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-500 uppercase">Risk Signal</span>
+              <div class="text-sky-400 font-bold mt-0.5">Vulnerable corridor</div>
             </div>
-            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-              <span class="text-[10px] text-slate-500 uppercase">Bytes Scanned</span>
-              <div class="font-mono text-emerald-400 font-bold mt-0.5">14.2 MB (Cached)</div>
+            <div class="inspector-stat bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-500 uppercase">Operational View</span>
+              <div class="text-emerald-400 font-bold mt-0.5">Live monitoring</div>
             </div>
-            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-              <span class="text-[10px] text-slate-500 uppercase">Target SLA</span>
-              <div class="font-mono text-amber-400 font-bold mt-0.5">&lt; 150 ms Latency</div>
+            <div class="inspector-stat bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-500 uppercase">Action</span>
+              <div class="text-amber-400 font-bold mt-0.5">Early warning</div>
             </div>
           </div>
-          <div>
-            <span class="text-[10px] font-bold uppercase text-slate-400">Distributed Spatial Join Statement:</span>
-            <pre id="modal-sql-content" class="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-[11px] text-sky-300 overflow-x-auto mt-1 leading-relaxed">
-WITH DepressurizedWaterSegments AS (
-    SELECT w.pipe_id, w.sector_id, w.geometry AS water_geom, 
-           ST_BUFFER(w.geometry, 5.0) AS vulnerability_buffer
-    FROM `aquavigil.water_network` w 
-    JOIN `aquavigil.scada_valve_events` v ON w.valve_id = v.valve_id 
-    WHERE v.event_type = 'SUPPLY_SHUTDOWN' 
-      AND v.timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 HOUR)
-)
-SELECT ws.pipe_id, s.sewer_id,
-       ROUND(ST_DISTANCE(ws.water_geom, s.geometry), 2) AS proximity_m,
-       ROUND(((5.0 - ST_DISTANCE(ws.water_geom, s.geometry))/5.0)*0.45 
-             + (s.condition_rating/5.0)*0.35 + 0.20, 2) AS intrusion_risk_score,
-       ST_ASGEOJSON(ST_INTERSECTION(ws.vulnerability_buffer, s.geometry)) AS corridor_geojson
-FROM DepressurizedWaterSegments ws 
-JOIN `aquavigil.sewerage_network` s 
-  ON ST_INTERSECTS(ws.vulnerability_buffer, s.geometry)
-ORDER BY intrusion_risk_score DESC;</pre>
+
+          <div class="inspector-body bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-300 leading-relaxed space-y-2">
+            <p>The system continuously combines utility telemetry, corridor risk maps, and citizen reports to detect areas where service reliability may be at risk.</p>
+            <p>When abnormal pressure or contamination conditions appear, AquaVigil highlights the affected area and routes the right response for households and municipal teams.</p>
+            <p>Decision support remains focused on public safety, service continuity, and transparent communications.</p>
           </div>
         </div>
 
-        <!-- Pub/Sub Tab -->
         <div id="tab-content-pubsub" class="hidden space-y-3">
-          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1.5">
-            <div class="flex justify-between items-center text-[11px]">
-              <span class="text-slate-400 font-mono">Topic:</span>
-              <span class="text-sky-400 font-mono font-bold">projects/aquavigil-2026/topics/scada.valve.telemetry</span>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div class="inspector-stat bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <div class="text-[10px] text-slate-500 uppercase">Detect</div>
+              <div class="text-sky-300 font-bold mt-1">Pressure and flow anomalies</div>
             </div>
-            <div class="flex justify-between items-center text-[11px]">
-              <span class="text-slate-400 font-mono">Ordering Key:</span>
-              <span class="text-emerald-400 font-mono font-bold">sector_04_south</span>
+            <div class="inspector-stat bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <div class="text-[10px] text-slate-500 uppercase">Prioritize</div>
+              <div class="text-amber-300 font-bold mt-1">High-risk corridors</div>
             </div>
-            <div class="flex justify-between items-center text-[11px]">
-              <span class="text-slate-400 font-mono">Message Delivery SLA:</span>
-              <span class="text-slate-200 font-mono">&lt; 20 ms End-to-End</span>
+            <div class="inspector-stat bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <div class="text-[10px] text-slate-500 uppercase">Notify</div>
+              <div class="text-emerald-300 font-bold mt-1">Residents and utilities</div>
             </div>
           </div>
-          <div>
-            <span class="text-[10px] font-bold uppercase text-slate-400">Ingested Telemetry JSON Schema:</span>
-            <pre class="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-[11px] text-emerald-300 overflow-x-auto mt-1 leading-relaxed">
-{
-  "event_id": "evt_valve_down_90412",
-  "valve_id": "VLV-SEC4-WEST-02",
-  "timestamp": "2026-10-17T14:30:00Z",
-  "event_type": "SUPPLY_CYCLE_SHUTDOWN",
-  "telemetry": {
-    "actuator_state": "CLOSED",
-    "residual_pressure_bar": 0.05,
-    "transient_gradient_dp_dt": -0.85,
-    "pipe_material": "CAST_IRON_UNLINED",
-    "installation_decade": "1980s"
-  },
-  "impacted_sub_network": {
-    "sector_id": "SECTOR_04_SOUTH",
-    "downstream_line_ids": ["WTR-PIPE-4011", "WTR-PIPE-4012"]
-  }
-}</pre>
+          <div class="inspector-body bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 leading-relaxed">
+            The response flow is designed to move from operational detection to immediate community guidance. Risk notifications, maintenance references, and public advisories are surfaced in a clear sequence to help teams act before conditions worsen.
           </div>
         </div>
 
-        <!-- Gemini Tab -->
         <div id="tab-content-gemini" class="hidden space-y-3">
-          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1.5">
-            <div class="flex justify-between items-center text-[11px]">
-              <span class="text-slate-400">Model Engine:</span>
-              <span class="text-sky-400 font-mono font-bold">gemini-2.0-flash (Multimodal Vision API)</span>
-            </div>
-            <div class="flex justify-between items-center text-[11px]">
-              <span class="text-slate-400">Output Mode:</span>
-              <span class="text-emerald-400 font-mono font-bold">response_mime_type: "application/json"</span>
-            </div>
-            <div class="flex justify-between items-center text-[11px]">
-              <span class="text-slate-400">Temperature:</span>
-              <span class="text-slate-300 font-mono">0.2 (High Determinism Forensics)</span>
-            </div>
-          </div>
-          <div>
-            <span class="text-[10px] font-bold uppercase text-slate-400">Structured Forensics JSON Output:</span>
-            <pre class="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-[11px] text-amber-300 overflow-x-auto mt-1 leading-relaxed">
-{
-  "visual_fouling_index": 0.84,
-  "deposit_indicators": "POSSIBLE_BIOFILM_ACCUMULATION",
-  "fouling_severity": "ELEVATED",
-  "estimated_turbidity_ntu": 340.0,
-  "optical_opacity_percent": 88.5,
-  "coliform_biofilm_likelihood": "CRITICAL_EVIDENT",
-  "household_guidance": "PRECAUTIONARY_ADVISORY",
-  "escalate_for_verification": true,
-  "rationale": "High optical opacity with deep reddish-brown iron oxide encrustation and gelatinous, uneven dark surface coating consistent with rapid subterranean biofilm ingress following pipe depressurization."
-}</pre>
-          </div>
-        </div>
-
-        <!-- Fluid Mechanics & Regulatory Tab -->
-        <div id="tab-content-hydraulics" class="hidden space-y-3">
-          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
-            <div class="font-bold text-white text-xs">Hydraulic Back-Siphonage &amp; Siphonage Mechanics</div>
-            <p class="text-slate-300 text-[11px] leading-relaxed">
-              In Intermittent Water Supply (IWS) regimes, sudden gate-valve shutoff halts bulk fluid momentum. When supply drain-down occurs along downhill easements, the hydraulic grade line drops below atmospheric datum ($P < P_{\text{atm}}$), generating a subterranean vacuum head of up to $-0.95\text{ bar}$.
-            </p>
-            <div class="font-mono text-emerald-400 text-[11px] bg-slate-900 p-2 rounded border border-slate-800">
-              Composite Risk = (0.55 × VisualFoulingIndex) + (0.45 × SpatialIntrusionScore × [Status == UNPRESSURIZED])
-            </div>
-            <p class="text-slate-400 text-[10px]">
-              <strong>Regulatory Grounding:</strong> WHO Guidelines for Drinking-water Quality (4th ed., §7.2.1 "Cross-contamination in Intermittent Distribution Systems") and US EPA Action Protocols for Potable Infrastructure Integrity.
-            </p>
+          <div class="inspector-body bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 text-slate-300 leading-relaxed">
+            <p>AquaVigil uses visual and contextual signals to estimate whether an area is showing unusual contamination conditions or infrastructure stress.</p>
+            <p>These insights are used to support a balanced response: public safety guidance, field verification, and escalation when the evidence indicates a higher-risk event.</p>
+            <p class="text-emerald-300 font-medium">Outcome: clearer triage, faster response, and more confidence in municipal decision-making.</p>
           </div>
         </div>
 
       </div>
 
-      <!-- Modal Footer -->
       <div class="p-3 border-t border-slate-800 bg-slate-950/60 flex justify-end">
-        <button onclick="closeArchitectureModal()" class="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs transition">
+        <button onclick="closeArchitectureModal()" class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs transition shadow-lg shadow-sky-600/20">
           Close Inspector
         </button>
       </div>

@@ -2,6 +2,11 @@ import os
 import json
 import mimetypes
 import logging
+import time
+import base64
+import hashlib
+from typing import Optional
+from datetime import datetime, timezone
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from pathlib import Path
@@ -21,9 +26,486 @@ DATA_DIR = BASE_DIR / "data"
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
 SAMPLE_DIR = DATA_DIR / "sample_images"
+INCIDENTS_DIR = DATA_DIR / "incident_records"
+PHOTOS_DIR = DATA_DIR / "photos"
+AUTH_USERS_FILE = DATA_DIR / "users.json"
+CLOUD_STORAGE_BUCKET = os.getenv("CLOUD_STORAGE_BUCKET", "")
+USE_CLOUD_DYNAMIC_DATA = os.getenv("USE_CLOUD_DYNAMIC_DATA", "true").lower() in {"1", "true", "yes", "on"}
 
-# Initialize BigQuery GIS engine
-gis_engine = BigQueryGISEngine(str(DATA_DIR / "network_topology.json"))
+
+def _user_accounts_table_id() -> str:
+    project_id = settings.GOOGLE_CLOUD_PROJECT or os.getenv("GOOGLE_CLOUD_PROJECT")
+    if not project_id:
+        raise ValueError("GOOGLE_CLOUD_PROJECT is not configured")
+    return f"{project_id}.aquavigil_dataset.user_accounts"
+
+
+def _usgs_water_table_id() -> str:
+    project_id = settings.GOOGLE_CLOUD_PROJECT or os.getenv("GOOGLE_CLOUD_PROJECT")
+    if not project_id:
+        raise ValueError("GOOGLE_CLOUD_PROJECT is not configured")
+    return f"{project_id}.aquavigil_dataset.usgs_water_observations"
+
+
+def _ensure_user_accounts_table(client):
+    if client is None:
+        raise RuntimeError("Google BigQuery client is unavailable")
+    table_id = _user_accounts_table_id()
+    try:
+        from google.cloud import bigquery
+        schema = [
+            bigquery.SchemaField("id", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("full_name", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("email", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("password_hash", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("role", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("agency", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("created_at", "STRING", mode="REQUIRED"),
+        ]
+        table = bigquery.Table(table_id, schema=schema)
+        table = client.create_table(table, exists_ok=True)
+        return table
+    except Exception as exc:
+        logger.error(f"Failed to create BigQuery user_accounts table: {exc}")
+        raise
+
+for directory in (INCIDENTS_DIR, PHOTOS_DIR):
+    directory.mkdir(parents=True, exist_ok=True)
+
+
+def _bigquery_client():
+    project_id = settings.GOOGLE_CLOUD_PROJECT or os.getenv("GOOGLE_CLOUD_PROJECT")
+    if not project_id or not USE_CLOUD_DYNAMIC_DATA:
+        return None
+    try:
+        from google.cloud import bigquery
+        return bigquery.Client(project=project_id)
+    except Exception as exc:
+        logger.info(f"Cloud BigQuery unavailable; using local persistence fallback: {exc}")
+        return None
+
+
+def _ensure_usgs_water_table(client):
+    if client is None:
+        raise RuntimeError("Google BigQuery client is unavailable")
+    table_id = _usgs_water_table_id()
+    try:
+        from google.cloud import bigquery
+        schema = [
+            bigquery.SchemaField("site_code", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("site_name", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("parameter_code", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("parameter_name", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("value", "FLOAT"),
+            bigquery.SchemaField("unit", "STRING"),
+            bigquery.SchemaField("timestamp", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("source", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("api_url", "STRING"),
+        ]
+        table = bigquery.Table(table_id, schema=schema)
+        client.create_table(table, exists_ok=True)
+        return table
+    except Exception as exc:
+        logger.error(f"Failed to create BigQuery usgs_water_observations table: {exc}")
+        raise
+
+
+def _upload_photo_to_cloud_storage(file_name: str, image_bytes: bytes) -> Optional[str]:
+    bucket_name = CLOUD_STORAGE_BUCKET or os.getenv("CLOUD_STORAGE_BUCKET")
+    if not bucket_name:
+        return None
+    try:
+        from google.cloud import storage
+        client = storage.Client(project=settings.GOOGLE_CLOUD_PROJECT or os.getenv("GOOGLE_CLOUD_PROJECT"))
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(file_name)
+        blob.upload_from_string(image_bytes, content_type="image/jpeg")
+        return f"https://storage.googleapis.com/{bucket_name}/{file_name}"
+    except Exception as exc:
+        logger.warning(f"Cloud photo upload failed; local storage retained: {exc}")
+        return None
+
+
+def fetch_usgs_live_water(site_code: str = "01646500", parameter_code: str = "00060") -> dict:
+    """Fetch the latest live USGS stream gauge observation for a water-monitoring dataset."""
+    try:
+        import urllib.request
+        url = f"https://waterservices.usgs.gov/nwis/iv/?format=json&sites={site_code}&parameterCd={parameter_code}&siteStatus=all"
+        req = urllib.request.Request(url, headers={"User-Agent": "AquaVigil-AIBuilderCup/1.0"})
+        with urllib.request.urlopen(req, timeout=15) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+
+        value_block = payload.get("value", {})
+        series = value_block.get("timeSeries", [])
+        if not series:
+            return {
+                "status": "NO_DATA",
+                "source": "USGS Water Data API",
+                "site_code": site_code,
+                "site_name": "",
+                "parameter_code": parameter_code,
+                "parameter_name": "Streamflow",
+                "value": None,
+                "timestamp": None,
+                "unit": None,
+                "api_url": url,
+                "message": "No live series was returned for the requested site."
+            }
+
+        first_series = series[0]
+        source_info = first_series.get("sourceInfo", {})
+        site_name = source_info.get("siteName", "USGS monitoring site")
+        site_code_value = source_info.get("siteCode", [{"value": site_code}])[0].get("value", site_code)
+        variable = first_series.get("variable", {})
+        variable_name = variable.get("variableName", "Stream discharge")
+        variable_code = variable.get("variableCode", [{"value": parameter_code}])[0].get("value", parameter_code)
+        values = first_series.get("values", [])
+        observed_points = values[0].get("value", []) if values else []
+        latest_observation = observed_points[-1] if observed_points else {}
+        latest_value = latest_observation.get("value")
+        latest_time = latest_observation.get("dateTime") or latest_observation.get("date") or datetime.now(timezone.utc).isoformat()
+
+        try:
+            numeric_value = float(latest_value) if latest_value not in (None, "", "NaN") else None
+        except (TypeError, ValueError):
+            numeric_value = None
+
+        result = {
+            "status": "SUCCESS",
+            "source": "USGS Water Data API",
+            "site_code": site_code_value,
+            "site_name": site_name,
+            "parameter_code": variable_code,
+            "parameter_name": variable_name,
+            "value": numeric_value,
+            "timestamp": latest_time,
+            "unit": "ft3/s" if parameter_code == "00060" else "unknown",
+            "api_url": url,
+            "message": f"Live USGS data for {site_name} loaded successfully."
+        }
+
+        client = _bigquery_client()
+        if client is not None:
+            try:
+                _ensure_usgs_water_table(client)
+                row = {
+                    "site_code": site_code_value,
+                    "site_name": site_name,
+                    "parameter_code": variable_code,
+                    "parameter_name": variable_name,
+                    "value": float(numeric_value) if numeric_value is not None else None,
+                    "unit": result["unit"],
+                    "timestamp": latest_time,
+                    "source": "USGS Water Data API",
+                    "api_url": url,
+                }
+                client.insert_rows_json(_usgs_water_table_id(), [row])
+            except Exception as exc:
+                logger.warning(f"USGS live water data could not be persisted to BigQuery: {exc}")
+
+        return result
+    except Exception as exc:
+        logger.warning(f"USGS live water fetch failed: {exc}")
+        return {
+            "status": "ERROR",
+            "source": "USGS Water Data API",
+            "message": str(exc)
+        }
+
+
+def fetch_wqp_live_quality(bbox: str = "-74.05,40.70,-73.95,40.80", characteristic_name: str = "Turbidity") -> dict:
+    """Query the WQP API for local environmental baseline records near an active pipe corridor."""
+    try:
+        import urllib.parse
+        import urllib.request
+        params = {
+            "bBox": bbox,
+            "characteristicName": characteristic_name,
+            "mimeType": "geojson",
+            "max": "10",
+        }
+        encoded = urllib.parse.urlencode(params)
+        url = f"https://www.waterqualitydata.us/data/Result/search?{encoded}"
+        req = urllib.request.Request(url, headers={"User-Agent": "AquaVigil-AIBuilderCup/1.0"})
+        with urllib.request.urlopen(req, timeout=20) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+
+        features = payload.get("features", [])
+        if not features:
+            return {
+                "status": "NO_DATA",
+                "source": "Water Quality Portal (WQP)",
+                "bbox": bbox,
+                "characteristic_name": characteristic_name,
+                "station_id": "",
+                "value": None,
+                "unit": None,
+                "timestamp": None,
+                "site_name": "",
+                "api_url": url,
+                "message": f"No live WQP record was returned for {characteristic_name}."
+            }
+
+        latest_feature = features[0]
+        properties = latest_feature.get("properties", {})
+        value = properties.get("resultMeasureValue")
+        unit = properties.get("resultMeasureUnit")
+        station_id = properties.get("MonitoringLocationIdentifier") or properties.get("monitoringLocationIdentifier")
+        try:
+            numeric_value = float(value) if value not in (None, "", "NaN") else None
+        except (TypeError, ValueError):
+            numeric_value = None
+
+        return {
+            "status": "SUCCESS",
+            "source": "Water Quality Portal (WQP)",
+            "bbox": bbox,
+            "characteristic_name": characteristic_name,
+            "station_id": station_id,
+            "value": numeric_value,
+            "unit": unit,
+            "timestamp": properties.get("ActivityStartDateTime") or properties.get("ActivityStartDate") or datetime.now(timezone.utc).isoformat(),
+            "site_name": properties.get("MonitoringLocationName") or properties.get("siteName") or "WQP station",
+            "api_url": url,
+            "message": f"Live WQP {characteristic_name} baseline loaded successfully."
+        }
+    except Exception as exc:
+        logger.warning(f"WQP live quality fetch failed: {exc}")
+        return {
+            "status": "ERROR",
+            "source": "Water Quality Portal (WQP)",
+            "message": str(exc),
+            "bbox": bbox,
+            "characteristic_name": characteristic_name,
+        }
+
+
+def load_users_store() -> dict:
+    client = _bigquery_client()
+    if client is None:
+        raise RuntimeError("Google BigQuery is not configured for dynamic user storage")
+
+    _ensure_user_accounts_table(client)
+    table_id = _user_accounts_table_id()
+    try:
+        query = f"SELECT * FROM `{table_id}` ORDER BY created_at DESC"
+        rows = list(client.query(query).result())
+        users = []
+        for row in rows:
+            users.append({
+                "id": getattr(row, "id", None),
+                "full_name": getattr(row, "full_name", ""),
+                "email": getattr(row, "email", ""),
+                "password_hash": getattr(row, "password_hash", ""),
+                "role": getattr(row, "role", "citizen"),
+                "agency": getattr(row, "agency", ""),
+                "created_at": getattr(row, "created_at", "")
+            })
+        return {"users": users}
+    except Exception as exc:
+        logger.error(f"Failed to load users from BigQuery: {exc}")
+        raise
+
+
+def save_users_store(store: dict):
+    client = _bigquery_client()
+    if client is None:
+        raise RuntimeError("Google BigQuery is not configured for dynamic user storage")
+
+    _ensure_user_accounts_table(client)
+    users = store.get("users", [])
+    table_id = _user_accounts_table_id()
+    try:
+        rows = []
+        for user in users:
+            rows.append({
+                "id": user.get("id"),
+                "full_name": user.get("full_name"),
+                "email": user.get("email"),
+                "password_hash": user.get("password_hash"),
+                "role": user.get("role"),
+                "agency": user.get("agency", ""),
+                "created_at": user.get("created_at")
+            })
+        if rows:
+            client.insert_rows_json(table_id, rows)
+        return
+    except Exception as exc:
+        logger.error(f"Cloud user persistence failed in BigQuery: {exc}")
+        raise
+
+
+def normalize_role(role: str) -> str:
+    role = (role or "citizen").strip().lower()
+    return role if role in ("citizen", "municipal") else "citizen"
+
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(("aquavigil:" + (password or "")).encode("utf-8")).hexdigest()
+
+
+def register_user(payload: dict):
+    store = load_users_store()
+    users = store.get("users", [])
+    email = (payload.get("email") or "").strip().lower()
+    password = payload.get("password") or ""
+    role = normalize_role(payload.get("role"))
+    full_name = (payload.get("full_name") or "").strip()
+    agency = (payload.get("agency") or "").strip()
+
+    if not email or not password or not full_name:
+        raise ValueError("name, email, and password are required")
+    if len(password) < 6:
+        raise ValueError("password must be at least 6 characters")
+    if any(user.get("email", "").lower() == email and user.get("role") == role for user in users):
+        raise ValueError(f"{role} account already exists for this email")
+
+    user = {
+        "id": f"{role}-{int(time.time()*1000)}",
+        "full_name": full_name,
+        "email": email,
+        "password_hash": hash_password(password),
+        "role": role,
+        "agency": agency if role == "municipal" else "",
+        "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    }
+    users.append(user)
+    save_users_store({"users": users})
+    return {"id": user["id"], "full_name": user["full_name"], "email": user["email"], "role": user["role"], "agency": user["agency"]}
+
+
+def authenticate_user(payload: dict):
+    store = load_users_store()
+    users = store.get("users", [])
+    email = (payload.get("email") or "").strip().lower()
+    password = payload.get("password") or ""
+    role = normalize_role(payload.get("role"))
+    for user in users:
+        if user.get("email", "").lower() == email and user.get("role") == role and user.get("password_hash") == hash_password(password):
+            return {
+                "id": user.get("id"),
+                "full_name": user.get("full_name"),
+                "email": user.get("email"),
+                "role": user.get("role"),
+                "agency": user.get("agency", "")
+            }
+    raise ValueError("invalid email, password, or role")
+
+
+def find_user(email: str, role: str):
+    store = load_users_store()
+    users = store.get("users", [])
+    email_key = (email or "").strip().lower()
+    role_key = normalize_role(role)
+    for user in users:
+        if user.get("email", "").lower() == email_key and user.get("role") == role_key:
+            return user
+    return None
+
+
+def reset_user_password(payload: dict):
+    store = load_users_store()
+    users = store.get("users", [])
+    target_email = (payload.get("email") or "").strip().lower()
+    role = normalize_role(payload.get("role"))
+    new_password = payload.get("new_password") or ""
+    if len(new_password) < 6:
+        raise ValueError("new password must be at least 6 characters")
+
+    user = None
+    for current in users:
+        if current.get("email", "").lower() == target_email and current.get("role") == role:
+            user = current
+            break
+    if user is None:
+        raise ValueError("account not found for the selected email and role")
+
+    user["password_hash"] = hash_password(new_password)
+    save_users_store({"users": users})
+    return {
+        "id": user.get("id"),
+        "full_name": user.get("full_name"),
+        "email": user.get("email"),
+        "role": user.get("role"),
+        "agency": user.get("agency", "")
+    }
+
+
+def get_profile_for_user(email: str, role: str):
+    user = find_user(email, role)
+    if user is None:
+        raise ValueError("user not found")
+    return {
+        "id": user.get("id"),
+        "full_name": user.get("full_name"),
+        "email": user.get("email"),
+        "role": user.get("role"),
+        "agency": user.get("agency", "")
+    }
+
+
+def save_incident_record(record: dict) -> dict:
+    timestamp = record.get("timestamp") or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    record_id = record.get("incident_id") or f"INC-{int(time.time() * 1000)}"
+    record["incident_id"] = record_id
+    record["timestamp"] = timestamp
+
+    client = _bigquery_client()
+    if client is not None:
+        table_id = f"{settings.GOOGLE_CLOUD_PROJECT or os.getenv('GOOGLE_CLOUD_PROJECT')}.aquavigil_dataset.incident_records"
+        try:
+            row = {
+                "incident_id": record_id,
+                "household_id": record.get("household_id", ""),
+                "address": record.get("address", ""),
+                "connected_pipe_id": record.get("connected_pipe_id", ""),
+                "status": record.get("status", "OPEN"),
+                "severity": record.get("severity", "MEDIUM"),
+                "timestamp": timestamp,
+                "payload": json.dumps(record),
+                "photo_url": record.get("photo_url") or ""
+            }
+            client.insert_rows_json(table_id, [row])
+        except Exception as exc:
+            logger.warning(f"Cloud incident persistence failed; local file fallback retained: {exc}")
+
+    file_path = INCIDENTS_DIR / f"{record_id}.json"
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(record, f, indent=2)
+    return record
+
+
+def load_incident_history() -> list:
+    client = _bigquery_client()
+    if client is not None:
+        table_id = f"{settings.GOOGLE_CLOUD_PROJECT or os.getenv('GOOGLE_CLOUD_PROJECT')}.aquavigil_dataset.incident_records"
+        try:
+            rows = list(client.query(f"SELECT * FROM `{table_id}` ORDER BY timestamp DESC LIMIT 50").result())
+            records = []
+            for row in rows:
+                payload = json.loads(getattr(row, "payload", "{}") or "{}")
+                if isinstance(payload, dict):
+                    records.append(payload)
+            if records:
+                return records
+        except Exception:
+            pass
+
+    records = []
+    if not INCIDENTS_DIR.exists():
+        return records
+    for file_path in sorted(INCIDENTS_DIR.glob("*.json")):
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            records.append(data)
+        except Exception:
+            continue
+    return records
+
+# Initialize BigQuery GIS engine in dataset-only mode
+# Live topology is loaded from BigQuery tables; no local static topology fallback is used.
+gis_engine = BigQueryGISEngine()
 
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
@@ -128,11 +610,28 @@ class AquaVigilHandler(BaseHTTPRequestHandler):
                 "mode": "Zero-Dependency Native Standard-Library Server",
                 "cloud_services": {
                     "spatial_engine": "BigQuery GIS (Topology Layer)",
-                    "operational_ingestion": "Cloud Pub/Sub",
+                    "operational_ingestion": "Google BigQuery + Cloud Pub/Sub live valve telemetry",
                     "multimodal_vision": "Gemini 1.5 Pro on Vertex AI",
-                    "application_server": "Cloud Run (Dual-Persona UI)"
+                    "application_server": "Cloud Run (Dual-Persona UI)",
+                    "storage": "Google Cloud-backed data services + local fallback only when unavailable"
                 }
             })
+            return
+
+        # 4b. Auth status check
+        if path == "/api/auth/me":
+            self.send_json({"status": "SUCCESS", "user": None})
+            return
+
+        if path == "/api/auth/profile":
+            query = parse_qs(parsed.query)
+            email = (query.get("email", [""])[0] or "").strip().lower()
+            role = (query.get("role", ["citizen"])[0] or "citizen").strip().lower()
+            try:
+                profile = get_profile_for_user(email, role)
+                self.send_json({"status": "SUCCESS", "user": profile})
+            except Exception as exc:
+                self.send_json({"status": "ERROR", "error": str(exc)}, 404)
             return
 
         # 5. Network GeoJSON
@@ -151,7 +650,25 @@ class AquaVigilHandler(BaseHTTPRequestHandler):
             self.send_json(pubsub_engine.get_live_telemetry_tick())
             return
 
-        # 6b. Live OpenStreetMap Corridor Fetcher
+        # 6b. Live USGS Water Data API
+        if path == "/api/usgs/live-water":
+            query = parse_qs(parsed.query)
+            site_code = (query.get("site", ["01646500"])[0] or "01646500").strip()
+            parameter_code = (query.get("parameter", ["00060"])[0] or "00060").strip()
+            status = fetch_usgs_live_water(site_code=site_code, parameter_code=parameter_code)
+            self.send_json(status)
+            return
+
+        # 6c. Live WQP Environmental Baseline API
+        if path == "/api/wqp/live-quality":
+            query = parse_qs(parsed.query)
+            bbox = (query.get("bbox", ["-74.05,40.70,-73.95,40.80"])[0] or "-74.05,40.70,-73.95,40.80").strip()
+            characteristic = (query.get("characteristic", ["Turbidity"])[0] or "Turbidity").strip()
+            status = fetch_wqp_live_quality(bbox=bbox, characteristic_name=characteristic)
+            self.send_json(status)
+            return
+
+        # 6d. Live OpenStreetMap Corridor Fetcher
         if path == "/api/network/fetch-live-osm":
             import urllib.request
             import urllib.parse
@@ -189,8 +706,11 @@ class AquaVigilHandler(BaseHTTPRequestHandler):
                         self.send_json({"status": "SUCCESS", "source": "Live OpenStreetMap Overpass API", "features_count": len(features), "features": features})
                         return
             except Exception as e:
-                logger.warning(f"OSM live fetch fallback: {e}")
-            self.send_json({"status": "FALLBACK", "message": "Using calibrated municipal corridor vectors"})
+                logger.warning(f"OSM live fetch failed: {e}")
+            self.send_json({
+                "status": "ERROR",
+                "message": "Live municipal corridor data unavailable; no fallback municipal vectors are used."
+            })
             return
 
         # 7. BigQuery GIS Correlation Query
@@ -203,6 +723,11 @@ class AquaVigilHandler(BaseHTTPRequestHandler):
         # 8. Recent Escalations
         if path == "/api/escalation/recent":
             self.send_json(escalation_engine.get_recent_escalations())
+            return
+
+        # 8b. Incident history and file-backed storage
+        if path == "/api/incidents/history":
+            self.send_json({"status": "SUCCESS", "records": load_incident_history()})
             return
 
         # 9. Downloadable Printable Incident Triage Report
@@ -340,6 +865,34 @@ class AquaVigilHandler(BaseHTTPRequestHandler):
 
         raw_body = self.rfile.read(content_length) if content_length > 0 else b""
 
+        # Auth: Sign up / Sign in / reset password for citizen and municipal users
+        if path == "/api/auth/signup":
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+                user = register_user(payload)
+                self.send_json({"status": "SUCCESS", "message": "Account created", "user": user})
+            except Exception as exc:
+                self.send_json({"status": "ERROR", "error": str(exc)}, 400)
+            return
+
+        if path == "/api/auth/login":
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+                user = authenticate_user(payload)
+                self.send_json({"status": "SUCCESS", "message": "Login successful", "user": user})
+            except Exception as exc:
+                self.send_json({"status": "ERROR", "error": str(exc)}, 401)
+            return
+
+        if path == "/api/auth/reset-password":
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+                user = reset_user_password(payload)
+                self.send_json({"status": "SUCCESS", "message": "Password updated successfully", "user": user})
+            except Exception as exc:
+                self.send_json({"status": "ERROR", "error": str(exc)}, 400)
+            return
+
         # Minute 1: Simulate Cessation
         if path == "/api/scada/simulate-cessation":
             res = pubsub_engine.trigger_supply_cessation_demo()
@@ -446,19 +999,12 @@ class AquaVigilHandler(BaseHTTPRequestHandler):
                 except Exception as e:
                     logger.warning(f"Failed to fetch image from online URL {image_url}: {e}")
 
-            if not image_bytes and preset in ("clean", "moderate", "severe"):
-                sample_file = SAMPLE_DIR / f"{preset}_filter.svg"
-                if not sample_file.exists():
-                    if preset == "severe":
-                        sample_file = SAMPLE_DIR / "severe_biofilm_rust_filter.svg"
-                    elif preset == "moderate":
-                        sample_file = SAMPLE_DIR / "moderate_silt_filter.svg"
-                    else:
-                        sample_file = SAMPLE_DIR / "clean_filter.svg"
-                if sample_file.exists():
-                    with open(sample_file, "rb") as f:
-                        image_bytes = f.read()
-                    mime_type = "image/svg+xml"
+            if not image_bytes and not image_url:
+                self.send_json({
+                    "status": "ERROR",
+                    "error": "No live image was provided. Upload a real filter image or use the live camera before analysis."
+                }, 400)
+                return
 
             analysis = gemini_analyzer.analyze_filter_image(image_bytes, mime_type, preset_hint=preset)
             self.send_json(analysis)
@@ -479,6 +1025,30 @@ class AquaVigilHandler(BaseHTTPRequestHandler):
                 self.send_json(incident)
             except Exception as e:
                 logger.error(f"Error evaluating escalation: {e}")
+                self.send_json({"status": "ERROR", "error": str(e)}, 400)
+            return
+
+        # Incident and photo persistence
+        if path == "/api/incidents/save":
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+                photo_base64 = payload.get("photo_base64")
+                photo_name = payload.get("photo_name")
+                if photo_base64:
+                    prefix, encoded = photo_base64.split(",", 1) if "," in photo_base64 else ("", photo_base64)
+                    ext = ".png" if "png" in prefix.lower() else ".jpg" if "jpeg" in prefix.lower() or "jpg" in prefix.lower() else ".webp" if "webp" in prefix.lower() else ".png"
+                    file_name = photo_name or f"obs-{int(time.time()*1000)}{ext}"
+                    file_path = PHOTOS_DIR / file_name
+                    image_bytes = base64.b64decode(encoded)
+                    with open(file_path, "wb") as out:
+                        out.write(image_bytes)
+                    payload["photo_path"] = str(file_path)
+                    payload["photo_saved"] = True
+                    payload["photo_url"] = _upload_photo_to_cloud_storage(file_name, image_bytes) or payload.get("photo_url")
+                saved = save_incident_record(payload)
+                self.send_json({"status": "SUCCESS", "record": saved})
+            except Exception as e:
+                logger.error(f"Error saving incident record: {e}")
                 self.send_json({"status": "ERROR", "error": str(e)}, 400)
             return
 

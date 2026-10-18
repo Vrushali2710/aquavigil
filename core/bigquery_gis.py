@@ -51,10 +51,17 @@ class BigQueryGISEngine:
     Pillar I: BigQuery GIS Subterranean Network-Topology Risk Layer.
     Executes distributed geospatial queries (`ST_BUFFER`, `ST_INTERSECTS`, `ST_DISTANCE`)
     between water distribution vectors and wastewater asset registries.
+
+    Production behavior: no local static topology fallback. If no live dataset rows are available,
+    return a clear no-data response instead of generating synthetic corridor values.
     """
-    def __init__(self, topology_path: str):
+    def __init__(self, topology_path: Optional[str] = None):
         self.topology_path = topology_path
-        self.topology = self._load_topology()
+        self.topology = self._load_topology() if topology_path else {
+            "type": "FeatureCollection",
+            "metadata": {"source": "BigQuery dataset only"},
+            "features": []
+        }
         self.buffer_meters = 5.0
         self.project_id = settings.GOOGLE_CLOUD_PROJECT or os.getenv("GOOGLE_CLOUD_PROJECT", "")
         self.dataset_id = settings.BIGQUERY_DATASET or os.getenv("BIGQUERY_DATASET", "aquavigil_dataset")
@@ -84,23 +91,61 @@ class BigQueryGISEngine:
           SELECT pipe_id, valve_id, sector_id, geometry
           FROM `{self.project_id}.{self.dataset_id}.water_network`
           WHERE pipe_id IN UNNEST(@pipes)
+        ),
+        corridors AS (
+          SELECT
+            ap.pipe_id AS water_pipe_id,
+            ap.sector_id,
+            sw.sewer_id,
+            ST_DISTANCE(ap.geometry, sw.geometry) AS proximity_m,
+            sw.condition_rating,
+            ROUND(((5.0 - ST_DISTANCE(ap.geometry, sw.geometry))/5.0)*0.45 + (sw.condition_rating/5.0)*0.35 + 0.20, 2) AS intrusion_risk_score,
+            ST_ASGEOJSON(ST_BUFFER(ap.geometry, 5.0)) AS corridor_geojson
+          FROM active_pipes ap
+          JOIN `{self.project_id}.{self.dataset_id}.sewerage_network` sw
+            ON ST_INTERSECTS(ST_BUFFER(ap.geometry, 5.0), sw.geometry)
+          WHERE ST_DISTANCE(ap.geometry, sw.geometry) <= 5.0
+        ),
+        municipal_matches AS (
+          SELECT
+            ap.pipe_id AS water_pipe_id,
+            ap.sector_id,
+            m.asset_id AS municipal_asset_id,
+            m.asset_name AS municipal_asset_name,
+            m.asset_type AS municipal_asset_type,
+            ST_DISTANCE(ap.geometry, m.geometry) AS municipal_proximity_m,
+            ST_ASGEOJSON(ST_INTERSECTION(ST_BUFFER(ap.geometry, 5.0), m.geometry)) AS municipal_corridor_geojson
+          FROM active_pipes ap
+          JOIN `{self.project_id}.{self.dataset_id}.municipal_infrastructure` m
+            ON ST_INTERSECTS(ST_BUFFER(ap.geometry, 5.0), m.geometry)
         )
         SELECT
-          ap.pipe_id AS water_pipe_id,
-          ap.sector_id,
-          sw.sewer_id,
-          ST_DISTANCE(ap.geometry, sw.geometry) AS proximity_m,
-          sw.condition_rating,
-          ROUND(((5.0 - ST_DISTANCE(ap.geometry, sw.geometry))/5.0)*0.45 + (sw.condition_rating/5.0)*0.35 + 0.20, 2) AS intrusion_risk_score,
-          ST_ASGEOJSON(ST_BUFFER(ap.geometry, 5.0)) AS corridor_geojson
-        FROM active_pipes ap
-        JOIN `{self.project_id}.{self.dataset_id}.sewerage_network` sw
-          ON ST_INTERSECTS(ST_BUFFER(ap.geometry, 5.0), sw.geometry)
-        WHERE ST_DISTANCE(ap.geometry, sw.geometry) <= 5.0
-        ORDER BY intrusion_risk_score DESC
+          c.water_pipe_id,
+          c.sector_id,
+          c.sewer_id,
+          c.proximity_m,
+          c.condition_rating,
+          c.intrusion_risk_score,
+          c.corridor_geojson,
+          m.municipal_asset_id,
+          m.municipal_asset_name,
+          m.municipal_asset_type,
+          m.municipal_proximity_m,
+          m.municipal_corridor_geojson
+        FROM corridors c
+        LEFT JOIN municipal_matches m
+          ON c.water_pipe_id = m.water_pipe_id
+        ORDER BY c.intrusion_risk_score DESC, m.municipal_proximity_m ASC
         """
         try:
-            job = client.query(query, job_config=None, job_id=None, params={"pipes": active_depressurized_pipes})
+            from google.cloud import bigquery
+
+            query_config = bigquery.QueryJobConfig(
+                query_parameters=[
+                    bigquery.ArrayQueryParameter("pipes", "STRING", active_depressurized_pipes)
+                ]
+            )
+            job = client.query(query, job_config=query_config)
             rows = list(job.result())
             if not rows:
                 return None
@@ -117,7 +162,12 @@ class BigQueryGISEngine:
                     "pipe_condition_rating": float(row.condition_rating or 0.0),
                     "intrusion_risk_score": round(min(1.0, max(0.0, score)), 2),
                     "threat_level": "CRITICAL" if score >= 0.80 else ("HIGH" if score >= 0.65 else "MODERATE"),
+                    "municipal_asset_id": row.municipal_asset_id,
+                    "municipal_asset_name": row.municipal_asset_name,
+                    "municipal_asset_type": row.municipal_asset_type,
+                    "municipal_proximity_m": round(float(row.municipal_proximity_m or 0.0), 2) if row.municipal_proximity_m is not None else None,
                     "geometry": json.loads(row.corridor_geojson) if row.corridor_geojson else None,
+                    "municipal_geometry": json.loads(row.municipal_corridor_geojson) if row.municipal_corridor_geojson else None,
                 }
                 results.append(corridor)
                 corridor_features.append({
@@ -128,6 +178,8 @@ class BigQueryGISEngine:
                         "intrusion_risk_score": round(min(1.0, max(0.0, score)), 2),
                         "threat_level": corridor["threat_level"],
                         "proximity_m": round(float(row.proximity_m or 0.0), 2),
+                        "municipal_asset_id": row.municipal_asset_id,
+                        "municipal_asset_name": row.municipal_asset_name,
                     },
                     "geometry": json.loads(row.corridor_geojson) if row.corridor_geojson else {"type": "Polygon", "coordinates": []}
                 })
@@ -142,7 +194,8 @@ class BigQueryGISEngine:
                 "results": results,
                 "corridor_geojson": {"type": "FeatureCollection", "features": corridor_features},
                 "data_source": "Google BigQuery Live API",
-                "sql_query": "Live BigQuery query against configured project.dataset tables",
+                "municipal_asset_count": sum(1 for row in results if row.get("municipal_asset_id") is not None),
+                "sql_query": "Live BigQuery query against configured project.dataset tables including municipal_infrastructure",
                 "execution_plan": {
                     "source": "Google BigQuery",
                     "project_id": self.project_id,
@@ -151,16 +204,20 @@ class BigQueryGISEngine:
                 },
             }
         except Exception as exc:
-            logger.warning(f"Live BigQuery query failed, using local fallback: {exc}")
+            logger.warning(f"Live BigQuery query failed: {exc}")
             return None
 
     def _load_topology(self) -> Dict[str, Any]:
+        if not self.topology_path:
+            return {"type": "FeatureCollection", "metadata": {"source": "BigQuery dataset only"}, "features": []}
         try:
             with open(self.topology_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return data
         except Exception as e:
             logger.error(f"Error loading topology: {e}")
-            return {"type": "FeatureCollection", "features": []}
+        return {"type": "FeatureCollection", "metadata": {"source": "BigQuery dataset only"}, "features": []}
 
     def generate_buffer_polygon(self, line_coords: List[List[float]], buffer_meters: float = 5.0) -> Dict[str, Any]:
         """
@@ -212,138 +269,44 @@ class BigQueryGISEngine:
     def run_spatial_correlation_query(self, active_depressurized_pipes: List[str]) -> Dict[str, Any]:
         """
         Executes BigQuery GIS Risk Query for active depressurized segments.
-        Prefers live Google BigQuery data when configured; otherwise falls back to the local topology model.
+        Dynamic-only mode: no embedded local topology or synthetic proximity fallback.
         """
         live_snapshot = self.fetch_live_bigquery_snapshot(active_depressurized_pipes)
         if live_snapshot is not None:
             return live_snapshot
 
-        start_time = time.time()
-        results = []
-        corridor_features = []
-
-        # Find features by ID
-        feature_map = {f["id"]: f for f in self.topology.get("features", [])}
-
-        # Defined proximity pairs in the network model
-        proximity_pairs = [
-            {
-                "water_pipe_id": "WTR-PIPE-4011",
-                "sewer_id": "SWR-PIPE-802",
-                "separation_distance_m": 1.20,
-                "sector_id": "SECTOR_04_SOUTH",
-                "length_m": 180.5,
-                "condition_rating": 4.4,
-                "street": "Pine Avenue Corridor",
-                "corridor_note": "Aged cast-iron 1980s drinking main directly adjacent to fractured 1974 vitrified clay sewer line"
-            },
-            {
-                "water_pipe_id": "WTR-PIPE-4012",
-                "sewer_id": "SWR-PIPE-805",
-                "separation_distance_m": 3.10,
-                "sector_id": "SECTOR_04_SOUTH",
-                "length_m": 145.0,
-                "condition_rating": 3.7,
-                "street": "Elm Way Junction",
-                "corridor_note": "Unlined cast-iron main sharing right-of-way easement with deteriorated concrete gravity sewer"
-            }
-        ]
-
-        for pair in proximity_pairs:
-            water_id = pair["water_pipe_id"]
-            if water_id in active_depressurized_pipes:
-                dist = pair["separation_distance_m"]
-                cond = pair["condition_rating"]
-                
-                # BigQuery GIS Scoring Formula from Page 3:
-                # ROUND(((5.0 - separation_distance_m)/5.0)*0.45 + (condition_rating/5.0)*0.35 + 0.20, 2)
-                proximity_factor = ((self.buffer_meters - dist) / self.buffer_meters) * 0.45
-                sewer_condition_factor = (cond / 5.0) * 0.35
-                baseline_constant = 0.20
-                risk_score = round(proximity_factor + sewer_condition_factor + baseline_constant, 2)
-
-                # Cap score at 1.00
-                risk_score = min(1.0, max(0.0, risk_score))
-
-                # Generate corridor buffer geometry
-                water_feature = feature_map.get(water_id)
-                coords = water_feature["geometry"]["coordinates"] if water_feature else []
-                buffer_geom = self.generate_buffer_polygon(coords, self.buffer_meters)
-
-                corridor_record = {
-                    "sector_id": pair["sector_id"],
-                    "water_pipe_id": water_id,
-                    "sewer_id": pair["sewer_id"],
-                    "proximity_m": dist,
-                    "pipe_condition_rating": cond,
-                    "intrusion_risk_score": risk_score,
-                    "street": pair["street"],
-                    "corridor_length_m": pair["length_m"],
-                    "threat_level": "CRITICAL" if risk_score >= 0.80 else ("HIGH" if risk_score >= 0.65 else "MODERATE"),
-                    "rationale": pair["corridor_note"],
-                    "geometry": buffer_geom
-                }
-                results.append(corridor_record)
-
-                # GeoJSON Feature for visualization
-                corridor_features.append({
-                    "type": "Feature",
-                    "properties": {
-                        "corridor_id": f"CORRIDOR_{water_id}_{pair['sewer_id']}",
-                        "water_pipe_id": water_id,
-                        "sewer_id": pair["sewer_id"],
-                        "intrusion_risk_score": risk_score,
-                        "threat_level": corridor_record["threat_level"],
-                        "proximity_m": dist,
-                        "street": pair["street"],
-                        "corridor_length_m": pair["length_m"]
-                    },
-                    "geometry": buffer_geom
-                })
-
-        execution_latency_ms = round((time.time() - start_time) * 1000 + 42.0, 1) # realistic sub-second BigQuery GIS time (<500ms)
-
-        sql_executed = BIGQUERY_SQL_TEMPLATE.format(
-            buffer_meters=f"{self.buffer_meters:.1f}",
-            dataset="aquavigil_dataset"
-        )
-
         return {
-            "query_status": "SUCCESS",
-            "execution_engine": "BigQuery GIS (Distributed Spatial Joins: ST_BUFFER / ST_INTERSECTS / ST_DISTANCE)",
-            "execution_latency_ms": execution_latency_ms,
-            "meets_prototype_sla": execution_latency_ms < 500.0,
-            "corridors_identified": len(results),
-            "highest_risk_score": max([r["intrusion_risk_score"] for r in results]) if results else 0.0,
-            "results": results,
+            "query_status": "NO_LIVE_DATA",
+            "execution_engine": "BigQuery GIS (dataset-driven only)",
+            "execution_latency_ms": 0.0,
+            "meets_prototype_sla": False,
+            "corridors_identified": 0,
+            "highest_risk_score": 0.0,
+            "results": [],
             "corridor_geojson": {
                 "type": "FeatureCollection",
-                "features": corridor_features
+                "features": []
             },
-            "sql_query": sql_executed,
-            "execution_plan": {
-                "bytes_scanned_mb": 14.2,
-                "bytes_billed_mb": 20.0,
-                "slot_time_ms": 185,
-                "spatial_indexing": "S2 Spherical Geometry (Level 14 Cells)",
-                "clustering_keys": "sector_id, valve_id",
-                "partition_filter": "timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 HOUR)"
-            },
-            "mathematical_formulation": {
-                "formula": "ROUND(((5.0 - separation_distance_m) / 5.0) * 0.45 + (condition_rating / 5.0) * 0.35 + 0.20, 2)",
-                "weights": {
-                    "spatial_proximity_weight": 0.45,
-                    "sewer_structural_rating_weight": 0.35,
-                    "baseline_material_constant": 0.20
-                },
-                "regulatory_standard": "WHO Guidelines for Drinking-water Quality 4th Ed. §7.2 (Back-siphonage ingress)"
-            }
+            "data_source": "Google BigQuery Live API",
+            "message": "No live dataset rows available. Populate water_network, sewerage_network, and scada_valve_events to enable dynamic corridor analysis.",
+            "sql_query": BIGQUERY_SQL_TEMPLATE.format(
+                buffer_meters=f"{self.buffer_meters:.1f}",
+                dataset=self.dataset_id
+            )
         }
 
     def get_full_network_geojson(self, active_depressurized_pipes: List[str]) -> Dict[str, Any]:
         """
-        Returns full GeoJSON topology with dynamic state overlays (pressurized vs unpressurized).
+        Returns an empty GeoJSON collection when the app is operating in dataset-only mode.
+        The dashboard should show a clear message instead of rendering synthetic static network data.
         """
+        if not self.topology.get("features"):
+            return {
+                "type": "FeatureCollection",
+                "metadata": {"source": "BigQuery dataset only"},
+                "features": []
+            }
+
         features_copy = []
         for feat in self.topology.get("features", []):
             feat_copy = json.loads(json.dumps(feat))
@@ -352,15 +315,15 @@ class BigQueryGISEngine:
                 if p_id in active_depressurized_pipes:
                     feat_copy["properties"]["current_status"] = "UNPRESSURIZED_RESTING"
                     feat_copy["properties"]["residual_pressure_bar"] = 0.05
-                    feat_copy["properties"]["color"] = "#ef4444" # Alert Red
+                    feat_copy["properties"]["color"] = "#ef4444"
                 else:
                     feat_copy["properties"]["current_status"] = "PRESSURIZED"
                     feat_copy["properties"]["residual_pressure_bar"] = 2.8
-                    feat_copy["properties"]["color"] = "#0284c7" # Normal Blue
+                    feat_copy["properties"]["color"] = "#0284c7"
             features_copy.append(feat_copy)
 
         return {
             "type": "FeatureCollection",
-            "metadata": self.topology.get("metadata", {}),
+            "metadata": self.topology.get("metadata", {"source": "BigQuery dataset only"}),
             "features": features_copy
         }

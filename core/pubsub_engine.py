@@ -1,7 +1,10 @@
 import datetime
 import json
 import logging
+import os
 from typing import Dict, List, Any, Optional
+
+from config import settings
 
 logger = logging.getLogger("aquavigil.pubsub")
 
@@ -13,6 +16,8 @@ class PubSubOperationalEngine:
     Orchestrates analytical tasks to evaluate network segments entering vulnerable rest periods.
     """
     def __init__(self):
+        self.project_id = settings.GOOGLE_CLOUD_PROJECT or os.getenv("GOOGLE_CLOUD_PROJECT")
+        self.dataset_id = settings.BIGQUERY_DATASET or os.getenv("BIGQUERY_DATASET", "aquavigil_dataset")
         self.events_history: List[Dict[str, Any]] = []
         self.active_depressurizations: Dict[str, Dict[str, Any]] = {}
         self.pressure_history: List[float] = [2.80] * 25
@@ -46,6 +51,33 @@ class PubSubOperationalEngine:
             "VLV-SEC4-WEST-02": "OPEN",
             "VLV-SEC4-NORTH-01": "OPEN"
         }
+
+    def _bigquery_client(self):
+        if not self.project_id:
+            return None
+        try:
+            from google.cloud import bigquery
+            return bigquery.Client(project=self.project_id)
+        except Exception as exc:
+            logger.info(f"BigQuery SCADA client unavailable; simulation fallback remains active: {exc}")
+            return None
+
+    def _persist_event_to_bigquery(self, processed_event: Dict[str, Any]) -> None:
+        client = self._bigquery_client()
+        if client is None:
+            return
+
+        table_id = f"{self.project_id}.{self.dataset_id}.scada_valve_events"
+        try:
+            row = {
+                "event_id": processed_event.get("event_id", ""),
+                "valve_id": processed_event.get("valve_id", ""),
+                "event_type": processed_event.get("event_type", "SUPPLY_CYCLE_SHUTDOWN"),
+                "timestamp": processed_event.get("timestamp", datetime.datetime.utcnow().isoformat() + "Z")
+            }
+            client.insert_rows_json(table_id, [row])
+        except Exception as exc:
+            logger.warning(f"Failed to persist SCADA event to BigQuery: {exc}")
 
     def publish_scada_event(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -89,6 +121,7 @@ class PubSubOperationalEngine:
                     self.active_depressurizations.pop(pipe_id, None)
 
         self.events_history.insert(0, processed_event)
+        self._persist_event_to_bigquery(processed_event)
         logger.info(f"Ingested PubSub event {event_id}: Valve {valve_id} is {actuator_state}")
         return processed_event
 
@@ -135,15 +168,88 @@ class PubSubOperationalEngine:
         }
         return self.publish_scada_event(demo_payload)
 
+    def _load_latest_scada_from_bigquery(self) -> Optional[Dict[str, Any]]:
+        client = self._bigquery_client()
+        if client is None:
+            return None
+
+        table_id = f"{self.project_id}.{self.dataset_id}.scada_valve_events"
+        query = f"""
+            SELECT event_id, valve_id, event_type, timestamp
+            FROM `{table_id}`
+            WHERE timestamp IS NOT NULL
+            ORDER BY timestamp DESC
+            LIMIT 1
+        """
+        try:
+            rows = list(client.query(query).result())
+            if not rows:
+                return None
+            row = rows[0]
+            event_type = getattr(row, "event_type", "SUPPLY_CYCLE_RESUME")
+            valve_id = getattr(row, "valve_id", "VLV-SEC4-WEST-02")
+            state = "CLOSED" if event_type in {"SUPPLY_CYCLE_SHUTDOWN", "VALVE_CLOSED", "SHUTDOWN"} else "OPEN"
+            return {
+                "event_id": getattr(row, "event_id", ""),
+                "valve_id": valve_id,
+                "event_type": event_type,
+                "actuator_state": state,
+                "timestamp": getattr(row, "timestamp", datetime.datetime.utcnow()).isoformat() if hasattr(getattr(row, "timestamp", datetime.datetime.utcnow()), "isoformat") else datetime.datetime.utcnow().isoformat() + "Z",
+                "source": "Google BigQuery scada_valve_events"
+            }
+        except Exception as exc:
+            logger.warning(f"Unable to read SCADA telemetry from BigQuery: {exc}")
+            return None
+
     def get_live_telemetry_tick(self) -> Dict[str, Any]:
         """
         Emits live real-time SCADA operational telemetry.
-        Generates realistic micro-oscillations, live ISO timestamps, and active pressure curves.
+        Uses Google BigQuery scada_valve_events when available, otherwise falls back to the simulated event stream.
         """
         now = datetime.datetime.utcnow()
         import math
         t = now.timestamp()
-        
+
+        latest_bigquery_event = self._load_latest_scada_from_bigquery()
+        if latest_bigquery_event is not None:
+            valve_state = latest_bigquery_event.get("actuator_state", "OPEN")
+            self.valve_states[latest_bigquery_event.get("valve_id", "VLV-SEC4-WEST-02")] = valve_state
+            residual_pressure = 0.05 if valve_state == "CLOSED" else 2.80
+            self.active_depressurizations.clear()
+            if valve_state == "CLOSED":
+                self.active_depressurizations["WTR-PIPE-4011"] = {"valve_id": latest_bigquery_event.get("valve_id", "VLV-SEC4-WEST-02")}
+                self.active_depressurizations["WTR-PIPE-4012"] = {"valve_id": latest_bigquery_event.get("valve_id", "VLV-SEC4-WEST-02")}
+            self.pipe_states["WTR-PIPE-4011"]["status"] = "UNPRESSURIZED_RESTING" if valve_state == "CLOSED" else "PRESSURIZED"
+            self.pipe_states["WTR-PIPE-4012"]["status"] = "UNPRESSURIZED_RESTING" if valve_state == "CLOSED" else "PRESSURIZED"
+            self.pipe_states["WTR-PIPE-4011"]["pressure_bar"] = residual_pressure if valve_state == "CLOSED" else 2.80
+            self.pipe_states["WTR-PIPE-4012"]["pressure_bar"] = residual_pressure if valve_state == "CLOSED" else 2.80
+
+            curr_p = self.pipe_states["WTR-PIPE-4011"]["pressure_bar"]
+            self.pressure_history.append(curr_p)
+            if len(self.pressure_history) > 30:
+                self.pressure_history.pop(0)
+            dt = max(0.2, t - self.last_tick_timestamp)
+            dp_dt = round((curr_p - self.last_pressure) / dt, 3)
+            self.last_pressure = curr_p
+            self.last_tick_timestamp = t
+            transient_regime = "SUB_ATMOSPHERIC_SIPHONAGE" if valve_state == "CLOSED" else "STEADY_HYDRAULIC_EQUILIBRIUM"
+            return {
+                "timestamp": latest_bigquery_event.get("timestamp", now.isoformat() + "Z"),
+                "valve_id": latest_bigquery_event.get("valve_id", "VLV-SEC4-WEST-02"),
+                "actuator_state": valve_state,
+                "residual_pressure_bar": curr_p,
+                "status": "UNPRESSURIZED_RESTING" if valve_state == "CLOSED" else "PRESSURIZED",
+                "flow_rate_lps": 0.0 if valve_state == "CLOSED" else 42.5,
+                "pressure_gradient_dp_dt": dp_dt,
+                "transient_hydraulic_regime": transient_regime,
+                "reynolds_flow_regime": "LAMINAR_DRAIN (Re<500)" if valve_state == "CLOSED" else "TURBULENT (Re=48,200)",
+                "pressure_history": self.pressure_history,
+                "active_depressurizations": list(self.active_depressurizations.keys()),
+                "pubsub_topic": "projects/aquavigil-2026/topics/scada.valve.telemetry",
+                "pubsub_subscription": "projects/aquavigil-2026/subscriptions/scada-spatial-correlator-sub",
+                "data_source": "Google BigQuery scada_valve_events"
+            }
+
         valve_state = self.valve_states.get("VLV-SEC4-WEST-02", "OPEN")
         
         for pipe_id in ["WTR-PIPE-4011", "WTR-PIPE-4012"]:

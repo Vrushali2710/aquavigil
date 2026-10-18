@@ -3,10 +3,11 @@
 let map = null;
 let networkGeoJsonLayer = null;
 let bufferCorridorLayer = null;
-let currentPreset = 'severe';
+let currentPreset = null;
 let selectedFile = null;
 let currentOperationalStatus = null;
 let lastGisResults = null;
+let notificationQueue = [];
 
 // Network Coordinates & Constants
 const SECTOR_CENTER = [12.9720, 77.5945];
@@ -15,16 +16,515 @@ const SECTOR_ZOOM = 17;
 document.addEventListener("DOMContentLoaded", () => {
   initMap();
   loadNetworkTopology();
+  loadUsgsWaterContext();
+  loadWqpQualityContext();
   refreshScadaStatus();
-  selectPreset('severe');
+  selectPreset(null);
   startLiveTelemetryTicker();
   setupImageUploadListeners();
+  initializeAuthUI();
+  renderNotifications();
+  addNotification({
+    title: 'System online',
+    message: 'AquaVigil is operational and monitoring current network conditions.',
+    level: 'info'
+  });
+  setInterval(loadUsgsWaterContext, 60000);
+  setInterval(loadWqpQualityContext, 60000);
 });
 
-// Switch Between Personas & Views (Safe for unified layout)
-function switchPersona(persona) {
-  if (map) {
-    setTimeout(() => { map.invalidateSize(); }, 150);
+function addNotification({ title, message, level = 'info', duration = 6000 }) {
+  const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const item = { id, title, message, level, timestamp: new Date().toISOString(), duration };
+  notificationQueue.unshift(item);
+  notificationQueue = notificationQueue.slice(0, 6);
+  renderNotifications();
+
+  setTimeout(() => {
+    notificationQueue = notificationQueue.filter(n => n.id !== id);
+    renderNotifications();
+  }, duration);
+}
+
+function renderNotifications() {
+  const center = document.getElementById('notification-center');
+  if (!center) return;
+
+  center.innerHTML = notificationQueue.map(n => `
+    <div class="notification-card border rounded-xl p-2.5 ${n.level === 'danger' ? 'text-rose-100' : n.level === 'success' ? 'text-emerald-100' : n.level === 'warning' ? 'text-amber-100' : 'text-sky-100'}" data-level="${n.level}">
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <div class="text-[10px] uppercase tracking-[0.18em] opacity-75">${n.level}</div>
+          <div class="text-xs font-bold mt-0.5">${n.title}</div>
+        </div>
+        <button type="button" onclick="dismissNotification('${n.id}')" class="text-[10px] opacity-70 hover:opacity-100">×</button>
+      </div>
+      <p class="mt-1 text-[11px] leading-relaxed opacity-90">${n.message}</p>
+    </div>
+  `).join('') || `
+    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-slate-400">
+      No active alerts. System is steady.
+    </div>
+  `;
+}
+
+function dismissNotification(id) {
+  notificationQueue = notificationQueue.filter(n => n.id !== id);
+  renderNotifications();
+}
+
+function dismissAllNotifications() {
+  notificationQueue = [];
+  renderNotifications();
+}
+
+let currentUserSession = null;
+let authMode = 'login';
+let authRole = 'citizen';
+
+function openAuthModal() {
+  const modal = document.getElementById('auth-modal');
+  if (modal) modal.classList.remove('hidden');
+  modal?.classList.add('flex');
+}
+
+function closeAuthModal() {
+  const modal = document.getElementById('auth-modal');
+  if (modal) modal.classList.add('hidden');
+  modal?.classList.remove('flex');
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  const submitBtn = document.getElementById('auth-submit');
+  const nameWrap = document.getElementById('auth-name-wrap');
+  const agencyWrap = document.getElementById('auth-agency-wrap');
+  const tabs = document.querySelectorAll('.auth-tab');
+  const isSignup = mode === 'signup';
+  const isReset = mode === 'reset';
+
+  tabs.forEach(tab => {
+    const active = tab.dataset.authTab === mode;
+    tab.classList.toggle('bg-sky-950', active);
+    tab.classList.toggle('border-sky-800', active);
+    tab.classList.toggle('text-sky-300', active);
+    tab.classList.toggle('bg-slate-950', !active);
+    tab.classList.toggle('border-slate-800', !active);
+    tab.classList.toggle('text-slate-300', !active);
+  });
+
+  if (nameWrap) nameWrap.classList.toggle('hidden', !isSignup);
+  if (agencyWrap) agencyWrap.classList.toggle('hidden', !(isSignup && authRole === 'municipal'));
+  if (submitBtn) submitBtn.textContent = isSignup ? 'Create account' : isReset ? 'Reset password' : 'Login';
+
+  const resetTrigger = document.getElementById('auth-reset-trigger');
+  if (resetTrigger) {
+    resetTrigger.textContent = isReset ? 'Back to login' : 'Forgot password?';
+  }
+}
+
+function setAuthRole(role) {
+  authRole = role;
+  document.querySelectorAll('.auth-role-btn').forEach(btn => {
+    const active = btn.dataset.authRole === role;
+    btn.classList.toggle('bg-emerald-950/60', active && role === 'citizen');
+    btn.classList.toggle('border-emerald-800', active && role === 'citizen');
+    btn.classList.toggle('text-emerald-300', active && role === 'citizen');
+    btn.classList.toggle('bg-sky-950/60', active && role === 'municipal');
+    btn.classList.toggle('border-sky-800', active && role === 'municipal');
+    btn.classList.toggle('text-sky-300', active && role === 'municipal');
+    btn.classList.toggle('bg-slate-950', !active);
+    btn.classList.toggle('border-slate-800', !active);
+    btn.classList.toggle('text-slate-300', !active);
+  });
+  const agencyWrap = document.getElementById('auth-agency-wrap');
+  if (agencyWrap) agencyWrap.classList.toggle('hidden', !(authMode === 'signup' && authRole === 'municipal'));
+}
+
+function showAuthMessage(text, type = 'warning') {
+  const msg = document.getElementById('auth-message');
+  if (!msg) return;
+  msg.textContent = text;
+  msg.classList.remove('hidden');
+  msg.classList.remove('border-amber-800', 'border-emerald-800', 'border-rose-800');
+  msg.classList.add(type === 'success' ? 'border-emerald-800' : type === 'error' ? 'border-rose-800' : 'border-amber-800');
+  msg.classList.add(type === 'success' ? 'bg-emerald-950/40' : type === 'error' ? 'bg-rose-950/40' : 'bg-amber-950/40');
+  msg.classList.add(type === 'success' ? 'text-emerald-200' : type === 'error' ? 'text-rose-200' : 'text-amber-200');
+}
+
+function ensureAccountMenu() {
+  const authBtn = document.getElementById('auth-button');
+  if (!authBtn || document.getElementById('aquavigil-account-menu')) return;
+
+  const container = authBtn.parentElement;
+  if (!container) return;
+  container.classList.add('relative');
+
+  const menu = document.createElement('div');
+  menu.id = 'aquavigil-account-menu';
+  menu.className = 'hidden absolute right-0 top-full mt-2 w-52 rounded-xl border border-slate-700 bg-slate-900/95 p-2 shadow-2xl shadow-slate-950/50 backdrop-blur-md';
+  menu.innerHTML = `
+    <div class="px-2 pb-2 pt-1 border-b border-slate-800 text-[10px] uppercase tracking-[0.2em] text-slate-400">My account</div>
+    <button type="button" data-account-action="profile" class="mt-2 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-200 hover:bg-slate-800">
+      <i data-lucide="user-round" class="w-3.5 h-3.5 text-sky-400"></i>
+      <span>Profile</span>
+    </button>
+    <button type="button" data-account-action="logout" class="mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-rose-200 hover:bg-rose-950/40">
+      <i data-lucide="log-out" class="w-3.5 h-3.5 text-rose-300"></i>
+      <span>Logout</span>
+    </button>
+  `;
+  menu.querySelector('[data-account-action="logout"]').addEventListener('click', logoutCurrentUser);
+  menu.querySelector('[data-account-action="profile"]').addEventListener('click', () => {
+    const currentUser = getCurrentUser();
+    addNotification({
+      title: 'Profile active',
+      message: currentUser ? `${currentUser.full_name} is signed in as a ${currentUser.role} user.` : 'No active account found.',
+      level: 'info',
+      duration: 4000
+    });
+    hideAccountMenu();
+  });
+  container.appendChild(menu);
+  if (window.lucide) lucide.createIcons();
+}
+
+function getCurrentUser() {
+  return currentUserSession;
+}
+
+function toggleAccountMenu() {
+  const menu = document.getElementById('aquavigil-account-menu');
+  if (!menu) return;
+  const isHidden = menu.classList.contains('hidden');
+  menu.classList.toggle('hidden', !isHidden);
+  const authBtn = document.getElementById('auth-button');
+  if (authBtn) authBtn.setAttribute('aria-expanded', String(isHidden));
+}
+
+function hideAccountMenu() {
+  const menu = document.getElementById('aquavigil-account-menu');
+  if (menu) menu.classList.add('hidden');
+  const authBtn = document.getElementById('auth-button');
+  if (authBtn) authBtn.setAttribute('aria-expanded', 'false');
+}
+
+function logoutCurrentUser() {
+  currentUserSession = null;
+  hideAccountMenu();
+  renderLoggedInState(null);
+  addNotification({
+    title: 'Signed out',
+    message: 'Your AquaVigil session has been closed successfully.',
+    level: 'success',
+    duration: 4000
+  });
+}
+
+function applyRoleBasedUI(user) {
+  const civicRole = user?.role || 'guest';
+  const isMunicipal = civicRole === 'municipal';
+
+  const municipalPanel = document.getElementById('municipal-only-panel');
+  const citizenPanel = document.getElementById('citizen-only-panel');
+  const roleBanner = document.getElementById('role-banner');
+
+  if (municipalPanel) municipalPanel.classList.toggle('hidden', !isMunicipal);
+  if (citizenPanel) citizenPanel.classList.toggle('hidden', isMunicipal);
+  if (roleBanner) {
+    roleBanner.classList.toggle('hidden', !isMunicipal);
+    roleBanner.textContent = isMunicipal ? 'Municipal operator console active' : 'Citizen portal active';
+  }
+
+  const municipalBtns = [
+    document.getElementById('btn-cessation'),
+    document.getElementById('btn-repressurize')
+  ];
+
+  municipalBtns.forEach((btn) => {
+    if (!btn) return;
+    const isLocked = !isMunicipal;
+    btn.disabled = isLocked;
+    btn.classList.toggle('opacity-50', isLocked);
+    btn.classList.toggle('cursor-not-allowed', isLocked);
+    btn.title = isLocked ? 'Municipal operators only' : btn.dataset.originalTitle || btn.title;
+  });
+
+  const authBtn = document.getElementById('auth-button');
+  if (authBtn && user) {
+    authBtn.classList.toggle('border-sky-800', !isMunicipal);
+    authBtn.classList.toggle('border-amber-700', isMunicipal);
+    authBtn.classList.toggle('text-amber-300', isMunicipal);
+  }
+}
+
+function renderLoggedInState(user) {
+  const authBtn = document.getElementById('auth-button');
+  if (!authBtn) return;
+  if (user) {
+    const name = user.full_name || 'My account';
+    authBtn.innerHTML = `<i data-lucide="user-check" class="w-3.5 h-3.5 text-emerald-400"></i><span>${name} (${user.role})</span>`;
+    authBtn.onclick = () => toggleAccountMenu();
+    authBtn.title = `Signed in as ${name} (${user.role})`;
+    authBtn.setAttribute('aria-expanded', 'false');
+    ensureAccountMenu();
+  } else {
+    authBtn.innerHTML = `<i data-lucide="user-round" class="w-3.5 h-3.5 text-sky-400"></i><span>Login / Sign up</span>`;
+    authBtn.onclick = openAuthModal;
+    authBtn.title = 'Login or sign up';
+    authBtn.setAttribute('aria-expanded', 'false');
+    hideAccountMenu();
+  }
+  applyRoleBasedUI(user);
+  if (window.lucide) lucide.createIcons();
+}
+
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+  const name = document.getElementById('auth-name')?.value || '';
+  const email = document.getElementById('auth-email')?.value || '';
+  const password = document.getElementById('auth-password')?.value || '';
+  const agency = document.getElementById('auth-agency')?.value || '';
+
+  const payload = {
+    full_name: name,
+    email,
+    password,
+    role: authRole,
+    agency: authRole === 'municipal' ? agency : ''
+  };
+
+  if (authMode === 'signup') {
+    if (!payload.full_name.trim()) {
+      showAuthMessage('Please enter your full name to create an account.', 'error');
+      return;
+    }
+  }
+
+  if (!payload.email.trim() || !payload.password.trim()) {
+    showAuthMessage('Email and password are required.', 'error');
+    return;
+  }
+
+  const endpoint = authMode === 'signup' ? '/api/auth/signup' : authMode === 'reset' ? '/api/auth/reset-password' : '/api/auth/login';
+  const resetPayload = authMode === 'reset' ? { email, role: authRole, new_password: password } : payload;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(authMode === 'reset' ? resetPayload : payload)
+    });
+    const data = await res.json();
+    if (!res.ok || data.status === 'ERROR') {
+      showAuthMessage(data.error || 'Authentication failed.', 'error');
+      return;
+    }
+
+    if (authMode === 'reset') {
+      showAuthMessage('Password reset successful. You can now login with your new password.', 'success');
+      setAuthMode('login');
+      document.getElementById('auth-password').value = '';
+      return;
+    }
+
+    const user = data.user || payload;
+    currentUserSession = user;
+    renderLoggedInState(user);
+    closeAuthModal();
+    showAuthMessage(authMode === 'signup' ? 'Account created successfully.' : 'Login successful.', 'success');
+    addNotification({
+      title: authMode === 'signup' ? 'Account created' : 'Login successful',
+      message: `${user.full_name} is now active as a ${user.role} user.`,
+      level: 'success',
+      duration: 6000
+    });
+  } catch (err) {
+    console.error('Auth request failed:', err);
+    showAuthMessage('Could not reach the authentication service. Please ensure the app backend is running and try again.', 'error');
+  }
+}
+
+function initializeAuthUI() {
+  const modal = document.getElementById('auth-modal');
+  const form = document.getElementById('auth-form');
+
+  document.querySelectorAll('.auth-tab').forEach(btn => {
+    btn.addEventListener('click', () => setAuthMode(btn.dataset.authTab));
+  });
+  document.querySelectorAll('.auth-role-btn').forEach(btn => {
+    btn.addEventListener('click', () => setAuthRole(btn.dataset.authRole));
+  });
+
+  if (form) form.addEventListener('submit', handleAuthSubmit);
+  const resetTrigger = document.getElementById('auth-reset-trigger');
+  if (resetTrigger) {
+    resetTrigger.addEventListener('click', () => {
+      setAuthMode(authMode === 'reset' ? 'login' : 'reset');
+      if (authMode === 'reset') {
+        showAuthMessage('Enter your email and choose a new password.', 'warning');
+      }
+    });
+  }
+  if (modal) modal.addEventListener('click', (event) => {
+    if (event.target === modal) closeAuthModal();
+  });
+
+  setAuthMode('login');
+  setAuthRole('citizen');
+  currentUserSession = null;
+  renderLoggedInState(null);
+}
+
+function updateContextualScore(score) {
+  const scoreEl = document.getElementById('contextual-escalation-score');
+  if (scoreEl) {
+    scoreEl.textContent = Number(score || 0).toFixed(2);
+  }
+}
+
+async function loadUsgsWaterContext() {
+  try {
+    const res = await fetch('/api/usgs/live-water?site=01646500&parameter=00060');
+    const data = await res.json();
+    const summaryEl = document.getElementById('metric-threat-summary');
+    const siteEl = document.getElementById('usgs-site-name');
+    const streamEl = document.getElementById('usgs-streamflow');
+    const paramEl = document.getElementById('usgs-parameter');
+    const tsEl = document.getElementById('usgs-timestamp');
+    const statusEl = document.getElementById('usgs-feed-status');
+
+    if (data.status === 'SUCCESS' && data.value !== null && data.value !== undefined) {
+      const unit = data.unit || 'ft3/s';
+      const value = Number(data.value ?? 0).toFixed(1);
+      if (summaryEl) {
+        summaryEl.textContent = `${data.site_name || ''}: ${value} ${unit} live streamflow`;
+        summaryEl.className = 'ml-1 text-emerald-300';
+      }
+      if (siteEl) siteEl.textContent = data.site_code || '';
+      if (streamEl) streamEl.textContent = `${value} ${unit}`;
+      if (paramEl) paramEl.textContent = data.parameter_code || '';
+      if (tsEl) tsEl.textContent = data.timestamp ? new Date(data.timestamp).toLocaleString() : '';
+      if (statusEl) {
+        statusEl.textContent = 'LIVE';
+        statusEl.className = 'rounded-full border border-emerald-800 bg-emerald-950/40 px-2 py-0.5 text-[9px] font-bold text-emerald-300';
+      }
+      return;
+    }
+
+    if (summaryEl) summaryEl.textContent = '';
+    if (siteEl) siteEl.textContent = '';
+    if (streamEl) streamEl.textContent = '';
+    if (paramEl) paramEl.textContent = '';
+    if (tsEl) tsEl.textContent = '';
+    if (statusEl) {
+      statusEl.textContent = '';
+      statusEl.className = 'rounded-full border border-slate-700 bg-slate-950/40 px-2 py-0.5 text-[9px] font-bold text-slate-400';
+    }
+  } catch (err) {
+    const summaryEl = document.getElementById('metric-threat-summary');
+    const statusEl = document.getElementById('usgs-feed-status');
+    if (summaryEl) summaryEl.textContent = '';
+    if (statusEl) {
+      statusEl.textContent = '';
+      statusEl.className = 'rounded-full border border-slate-700 bg-slate-950/40 px-2 py-0.5 text-[9px] font-bold text-slate-400';
+    }
+  }
+}
+
+async function loadWqpQualityContext() {
+  try {
+    const res = await fetch('/api/wqp/live-quality?bbox=-74.05,40.70,-73.95,40.80&characteristic=Turbidity');
+    const data = await res.json();
+
+    const stationEl = document.getElementById('wqp-station-id');
+    const turbidityEl = document.getElementById('wqp-turbidity');
+    const characteristicEl = document.getElementById('wqp-characteristic');
+    const timestampEl = document.getElementById('wqp-timestamp');
+    const statusEl = document.getElementById('wqp-feed-status');
+
+    if (data.status === 'SUCCESS' && data.value !== null && data.value !== undefined) {
+      const value = Number(data.value ?? 0).toFixed(2);
+      const unit = data.unit || 'NTU';
+      if (stationEl) stationEl.textContent = data.station_id || '';
+      if (turbidityEl) turbidityEl.textContent = `${value} ${unit}`;
+      if (characteristicEl) characteristicEl.textContent = data.characteristic_name || '';
+      if (timestampEl) timestampEl.textContent = data.timestamp ? new Date(data.timestamp).toLocaleString() : '';
+      if (statusEl) {
+        statusEl.textContent = 'LIVE';
+        statusEl.className = 'rounded-full border border-emerald-800 bg-emerald-950/40 px-2 py-0.5 text-[9px] font-bold text-emerald-300';
+      }
+      return;
+    }
+
+    if (stationEl) stationEl.textContent = '';
+    if (turbidityEl) turbidityEl.textContent = '';
+    if (characteristicEl) characteristicEl.textContent = '';
+    if (timestampEl) timestampEl.textContent = '';
+    if (statusEl) {
+      statusEl.textContent = '';
+      statusEl.className = 'rounded-full border border-slate-700 bg-slate-950/40 px-2 py-0.5 text-[9px] font-bold text-slate-400';
+    }
+  } catch (err) {
+    const stationEl = document.getElementById('wqp-station-id');
+    const turbidityEl = document.getElementById('wqp-turbidity');
+    const characteristicEl = document.getElementById('wqp-characteristic');
+    const timestampEl = document.getElementById('wqp-timestamp');
+    const statusEl = document.getElementById('wqp-feed-status');
+
+    if (stationEl) stationEl.textContent = '';
+    if (turbidityEl) turbidityEl.textContent = '';
+    if (characteristicEl) characteristicEl.textContent = '';
+    if (timestampEl) timestampEl.textContent = '';
+    if (statusEl) {
+      statusEl.textContent = '';
+      statusEl.className = 'rounded-full border border-slate-700 bg-slate-950/40 px-2 py-0.5 text-[9px] font-bold text-slate-400';
+    }
+  }
+}
+
+async function submitHouseholdObservation() {
+  const text = document.getElementById('household-observation-text');
+  const feedback = document.getElementById('observation-feedback');
+  if (!text || !text.value.trim()) {
+    if (feedback) feedback.textContent = 'Add a note before sending.';
+    return;
+  }
+
+  const payload = {
+    incident_id: `OBS-${Date.now()}`,
+    source: 'citizen_observation',
+    address: document.getElementById('citizen-address-select')?.value || 'HOUSE-PIN-01',
+    note: text.value.trim(),
+    timestamp: new Date().toISOString(),
+    household_risk_boost: 0.12,
+    street: 'Pine Avenue Corridor'
+  };
+
+  try {
+    const res = await fetch('/api/incidents/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (feedback) {
+      feedback.textContent = data.status === 'SUCCESS' ? 'Observation saved to incident archive.' : 'Save failed.';
+    }
+    if (data.status === 'SUCCESS') {
+      const score = Number(document.getElementById('contextual-escalation-score')?.textContent || '0.00');
+      updateContextualScore(Math.min(0.99, score + 0.08));
+      addNotification({
+        title: 'Citizen observation saved',
+        message: 'Household report has been archived and included in the risk context.',
+        level: 'success',
+        duration: 7000
+      });
+      text.value = '';
+    }
+  } catch (err) {
+    console.error('Observation save failed:', err);
+    if (feedback) feedback.textContent = 'Could not save the observation.';
   }
 }
 
@@ -238,6 +738,12 @@ async function triggerCessation() {
     await refreshScadaStatus();
     await loadNetworkTopology();
     await runBigQueryGisTriage();
+    addNotification({
+      title: 'Supply cessation detected',
+      message: 'Valve VLV-SEC4-WEST-02 triggered a shutdown; low-pressure ingress risk is now active.',
+      level: 'danger',
+      duration: 9000
+    });
   } catch (err) {
     console.error("Error triggering cessation:", err);
   }
@@ -251,6 +757,12 @@ async function triggerRepressurize() {
     await refreshScadaStatus();
     await loadNetworkTopology();
     clearBufferCorridors();
+    addNotification({
+      title: 'System restored',
+      message: 'Network pressure has been restored and the incident state was cleared.',
+      level: 'success',
+      duration: 7000
+    });
   } catch (err) {
     console.error("Error repressurizing:", err);
   }
@@ -265,8 +777,8 @@ async function runBigQueryGisTriage() {
 
     const latEl = document.getElementById('metric-latency');
     if (latEl) {
-      const latency = data && typeof data.execution_latency_ms !== 'undefined' ? data.execution_latency_ms : 'n/a';
-      latEl.textContent = `${latency} ms`;
+      const latency = data && typeof data.execution_latency_ms !== 'undefined' ? data.execution_latency_ms : null;
+      latEl.textContent = latency !== null && latency !== undefined ? `${latency} ms` : '';
     }
 
     const threatScoreEl = document.getElementById('metric-threat-score');
@@ -287,10 +799,15 @@ async function runBigQueryGisTriage() {
         threatBadgeEl.className = 'mt-1 text-[10px] px-2 py-1 rounded bg-rose-950 text-rose-400 font-bold border border-rose-800 inline-flex';
       }
       if (threatSummaryEl) {
-        const street = top.street || top.sector_id || 'Affected corridor';
-        const proximity = top.proximity_m ?? 'n/a';
-        threatSummaryEl.textContent = `${street} (Proximity: ${proximity}m)`;
+        const street = top.street || top.sector_id || '';
+        const proximity = top.proximity_m ?? null;
+        threatSummaryEl.textContent = street ? (proximity !== null && proximity !== undefined ? `${street} (Proximity: ${proximity}m)` : street) : '';
         threatSummaryEl.className = 'ml-1 text-rose-300 font-medium';
+      }
+
+      const corridorLengthLabel = document.getElementById('corridor-length-label');
+      if (corridorLengthLabel) {
+        corridorLengthLabel.textContent = top.corridor_length_m !== null && top.corridor_length_m !== undefined ? `${Number(top.corridor_length_m).toFixed(0)} m` : '';
       }
 
       if (bufferCorridorLayer && data.corridor_geojson) {
@@ -298,14 +815,25 @@ async function runBigQueryGisTriage() {
         bufferCorridorLayer.addData(data.corridor_geojson);
       }
 
+      addNotification({
+        title: 'Spatial risk update',
+        message: `High intrusion risk corridor detected near ${results[0].water_pipe_id || 'main'} with score ${Number(results[0].intrusion_risk_score || 0).toFixed(2)}.`,
+        level: results[0].intrusion_risk_score >= 0.8 ? 'danger' : 'warning',
+        duration: 8000
+      });
+
       renderCorridorTable(results);
     } else {
       clearBufferCorridors();
     }
 
     const sqlContentEl = document.getElementById('modal-sql-content');
-    if (sqlContentEl && data.sql_query) {
-      sqlContentEl.textContent = data.sql_query;
+    if (sqlContentEl) {
+      sqlContentEl.innerHTML = `
+        <div class="font-mono text-sky-300">Network topology + valve event stream + asset condition signals are aggregated to highlight vulnerable corridors.</div>
+        <div class="text-slate-400">The engine evaluates proximity, pressure loss, and infrastructure condition to prioritize public safety interventions.</div>
+        <div class="text-slate-400">Risk outputs are displayed as corridor alerts, municipal dispatch guidance, and household advisories.</div>
+      `;
     }
 
     return data;
@@ -324,13 +852,16 @@ function clearBufferCorridors() {
     threatScoreEl.className = 'text-2xl font-black text-slate-400';
   }
   if (threatBadgeEl) {
-    threatBadgeEl.textContent = 'NOMINAL';
+    threatBadgeEl.textContent = '';
     threatBadgeEl.className = 'text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300';
   }
   if (threatSummaryEl) {
-    threatSummaryEl.textContent = 'All potable lines pressurized';
+    threatSummaryEl.textContent = '';
     threatSummaryEl.className = 'text-xs text-slate-400';
   }
+
+  const corridorLengthLabel = document.getElementById('corridor-length-label');
+  if (corridorLengthLabel) corridorLengthLabel.textContent = '';
 
   const container = document.getElementById('corridor-results-container');
   if (container) {
@@ -354,33 +885,34 @@ function renderCorridorTable(results) {
   const safeResults = Array.isArray(results) ? results : [];
   let html = `<div class="space-y-2.5">`;
   safeResults.forEach(r => {
-    const street = r.street || r.sector_id || 'Affected corridor';
-    const threatLevel = r.threat_level || 'HIGH';
+    const street = r.street || r.sector_id || '';
+    const threatLevel = r.threat_level || '';
     const score = Number(r.intrusion_risk_score ?? 0);
-    const proximity = r.proximity_m ?? 'n/a';
-    const sewerRating = r.pipe_condition_rating ?? 'n/a';
-    const corridorLength = r.corridor_length_m ?? 'n/a';
-    const rationale = r.rationale || 'Spatial proximity and asset condition indicate risk of cross-contamination during low-pressure events.';
+    const proximity = r.proximity_m ?? null;
+    const sewerRating = r.pipe_condition_rating ?? null;
+    const corridorLength = r.corridor_length_m ?? null;
+    const rationale = r.rationale || '';
 
     html += `
       <div class="bg-slate-950 p-3.5 rounded-xl border border-rose-900/60 flex items-start justify-between">
         <div class="space-y-1">
           <div class="flex items-center space-x-2">
-            <span class="text-xs font-bold text-white">${street}</span>
-            <span class="text-[10px] px-1.5 py-0.2 rounded bg-rose-950 text-rose-400 font-bold border border-rose-800">${threatLevel}</span>
+            ${street ? `<span class="text-xs font-bold text-white">${street}</span>` : ''}
+            ${threatLevel ? `<span class="text-[10px] px-1.5 py-0.2 rounded bg-rose-950 text-rose-400 font-bold border border-rose-800">${threatLevel}</span>` : ''}
           </div>
           <div class="text-[11px] text-slate-300">
-            Water: <strong class="text-sky-400">${r.water_pipe_id || 'N/A'}</strong> ⟂ Sewer: <strong class="text-amber-400">${r.sewer_id || 'N/A'}</strong>
+            Water: <strong class="text-sky-400">${r.water_pipe_id || ''}</strong> ${r.sewer_id ? '⟂ Sewer: ' : ''}<strong class="text-amber-400">${r.sewer_id || ''}</strong>
           </div>
           <div class="text-[10px] text-slate-400">
-            Separation: <strong class="text-white">${proximity}m</strong> | Sewer Rating: <strong class="text-rose-400">${sewerRating}/5.0</strong>
+            ${proximity !== null && proximity !== undefined ? `<strong class="text-white">${proximity}m</strong> | ` : ''}
+            ${sewerRating !== null && sewerRating !== undefined ? `<strong class="text-rose-400">${sewerRating}/5.0</strong>` : ''}
           </div>
-          <p class="text-[10px] text-slate-400 italic pt-1">${rationale}</p>
+          ${rationale ? `<p class="text-[10px] text-slate-400 italic pt-1">${rationale}</p>` : ''}
         </div>
         <div class="text-right">
           <div class="text-[10px] text-slate-400 uppercase">Intrusion Score</div>
           <div class="text-xl font-black text-rose-400">${Number.isFinite(score) ? score.toFixed(2) : '0.00'}</div>
-          <div class="text-[9px] text-slate-500">${corridorLength}m corridor</div>
+          ${corridorLength !== null && corridorLength !== undefined ? `<div class="text-[9px] text-slate-500">${corridorLength}m corridor</div>` : ''}
         </div>
       </div>
     `;
@@ -459,7 +991,7 @@ function handleGlobalPaste(e) {
 }
 
 function updatePresetButtons(activePreset) {
-  ['clean', 'moderate', 'severe'].forEach(p => {
+  ['severe'].forEach(p => {
     const btn = document.getElementById(`preset-btn-${p}`);
     if (btn) {
       if (p === activePreset) {
@@ -471,6 +1003,13 @@ function updatePresetButtons(activePreset) {
   });
 }
 
+function showFilterInfo() {
+  const panel = document.getElementById('filter-info-panel');
+  if (!panel) return;
+  panel.classList.toggle('hidden');
+  if (window.lucide) lucide.createIcons();
+}
+
 // Preset selection
 function selectPreset(preset) {
   currentPreset = preset;
@@ -480,19 +1019,13 @@ function selectPreset(preset) {
 
   const previewImg = document.getElementById('filter-preview-img');
   if (previewImg) {
-    if (preset === 'severe') {
-      previewImg.src = '/api/samples/severe_biofilm_rust_filter.svg';
-    } else if (preset === 'moderate') {
-      previewImg.src = '/api/samples/moderate_silt_filter.svg';
-    } else {
-      previewImg.src = '/api/samples/clean_filter.svg';
-    }
+    previewImg.removeAttribute('src');
+    previewImg.alt = 'Awaiting live image upload';
   }
 
   const badge = document.getElementById('active-image-source');
   if (badge) {
-    const labels = { clean: 'Clean Filter (0.08)', moderate: 'Silt Filter (0.52)', severe: 'Biofilm Preset (0.84)' };
-    badge.textContent = labels[preset] || preset;
+    badge.textContent = 'Awaiting live upload';
   }
 }
 
@@ -531,7 +1064,7 @@ async function executeFilterAnalysis() {
     } else if (currentPreset) {
       formData.append('preset', currentPreset);
     } else {
-      formData.append('preset', 'severe');
+      formData.append('preset', 'custom_upload');
     }
 
     const res = await fetch('/api/gemini/analyze-filter', {
@@ -590,9 +1123,22 @@ async function executeFilterAnalysis() {
     });
     const escData = await escRes.json();
 
+    const contextualScore = Number(escData.contextual_escalation_score ?? 0.0);
+    const contextualScoreEl = document.getElementById('contextual-escalation-score');
+    if (contextualScoreEl) {
+      contextualScoreEl.textContent = contextualScore.toFixed(2);
+    }
+
     // Update Tier 1 & Tier 2 messages
     document.getElementById('tier1-message').textContent = escData.tier1_household.message;
     document.getElementById('tier2-message').textContent = escData.tier2_municipal.action_required + " (" + escData.tier2_municipal.defensibility_note + ")";
+
+    addNotification({
+      title: 'Escalation triggered',
+      message: `${escData.tier1_household.headline} issued for ${addressText}. Municipal dispatch queued.`,
+      level: escData.escalation_level && escData.escalation_level.includes('TIER_2') ? 'warning' : 'info',
+      duration: 9000
+    });
 
     const sopBadge = document.getElementById('tier2-sop-badge');
     if (sopBadge && escData.technical_metrics) {
@@ -675,6 +1221,8 @@ function openArchitectureModal(tab) {
   const modal = document.getElementById('architecture-modal');
   if (modal) {
     modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
     switchModalTab(tab || 'bigquery');
     lucide.createIcons();
   }
@@ -682,7 +1230,11 @@ function openArchitectureModal(tab) {
 
 function closeArchitectureModal() {
   const modal = document.getElementById('architecture-modal');
-  if (modal) modal.classList.add('hidden');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+  document.body.classList.remove('modal-open');
 }
 
 function switchModalTab(tabName) {
@@ -710,12 +1262,27 @@ function switchModalTab(tabName) {
 
 let liveCameraStream = null;
 let liveTelemetryTimer = null;
+let liveTelemetryInFlight = false;
+
+if (!window.__AQUAVIGIL_LIVE_TICKER__) {
+  window.__AQUAVIGIL_LIVE_TICKER__ = { started: false };
+}
 
 // 1. Live SCADA Stream Ticker
 function startLiveTelemetryTicker() {
-  if (liveTelemetryTimer) clearInterval(liveTelemetryTimer);
+  if (window.__AQUAVIGIL_LIVE_TICKER__.started) {
+    return;
+  }
 
+  if (liveTelemetryTimer) {
+    clearInterval(liveTelemetryTimer);
+  }
+
+  window.__AQUAVIGIL_LIVE_TICKER__.started = true;
   liveTelemetryTimer = setInterval(async () => {
+    if (liveTelemetryInFlight) return;
+    liveTelemetryInFlight = true;
+
     try {
       const res = await fetch('/api/scada/live-tick');
       if (!res.ok) return;
@@ -772,8 +1339,16 @@ function startLiveTelemetryTicker() {
       updateCitizenPipeIndicator();
     } catch (e) {
       // Background poll
+    } finally {
+      liveTelemetryInFlight = false;
     }
   }, 1500);
+
+  window.addEventListener('beforeunload', () => {
+    clearInterval(liveTelemetryTimer);
+    liveTelemetryTimer = null;
+    window.__AQUAVIGIL_LIVE_TICKER__.started = false;
+  }, { once: true });
 }
 
 // 2. Live Device Camera Capture
@@ -865,8 +1440,32 @@ function useLiveGpsCorridor() {
         L.geoJSON(data, {
           style: { color: '#0284c7', weight: 4, opacity: 0.85 }
         }).addTo(map);
-        alert(`✓ Loaded live OpenStreetMap corridors around your location (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+        const osmLabel = document.getElementById('osm-baseline-label');
+        if (osmLabel) osmLabel.textContent = `Road corridor: ${data.features.length} ways`;
+        const corrLabel = document.getElementById('corridor-length-label');
+        if (corrLabel) corrLabel.textContent = `${Math.max(120, data.features.length * 26)} m`;
+        addNotification({
+          title: 'OSM corridor added',
+          message: `OpenStreetMap baseline loaded for ${lat.toFixed(4)}, ${lon.toFixed(4)}.`,
+          level: 'info',
+          duration: 7000
+        });
       }
+
+      try {
+        const elevationRes = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
+        const elevationData = await elevationRes.json();
+        const elev = elevationData.results && elevationData.results[0] ? elevationData.results[0].elevation : null;
+        const elevationEl = document.getElementById('elevation-baseline-label');
+        if (elevationEl) {
+          elevationEl.textContent = elev !== null ? `${Math.round(elev)} m` : '-- m';
+        }
+      } catch (e) {
+        const elevationEl = document.getElementById('elevation-baseline-label');
+        if (elevationEl) elevationEl.textContent = 'Baseline unavailable';
+      }
+
+      alert(`✓ Loaded live OpenStreetMap corridors around your location (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
     } catch (e) {
       console.warn("Could not load OSM corridors:", e);
     } finally {

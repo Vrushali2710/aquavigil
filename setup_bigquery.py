@@ -52,6 +52,21 @@ def setup_bigquery():
         client.create_table(sewer_table, exists_ok=True)
         print(f"✓ Table {sewer_table_ref} ready.")
 
+        municipal_schema = [
+            bigquery.SchemaField("asset_id", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("asset_name", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("asset_type", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("source_name", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("source_portal", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("status", "STRING"),
+            bigquery.SchemaField("description", "STRING"),
+            bigquery.SchemaField("geometry", "GEOGRAPHY", mode="REQUIRED"),
+        ]
+        municipal_table_ref = f"{dataset_ref}.municipal_infrastructure"
+        municipal_table = bigquery.Table(municipal_table_ref, schema=municipal_schema)
+        client.create_table(municipal_table, exists_ok=True)
+        print(f"✓ Table {municipal_table_ref} ready.")
+
         scada_schema = [
             bigquery.SchemaField("event_id", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("valve_id", "STRING", mode="REQUIRED"),
@@ -62,6 +77,22 @@ def setup_bigquery():
         scada_table = bigquery.Table(scada_table_ref, schema=scada_schema)
         client.create_table(scada_table, exists_ok=True)
         print(f"✓ Table {scada_table_ref} ready.")
+
+        water_context_schema = [
+            bigquery.SchemaField("site_code", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("site_name", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("parameter_code", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("parameter_name", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("value", "FLOAT"),
+            bigquery.SchemaField("unit", "STRING"),
+            bigquery.SchemaField("timestamp", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("source", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("api_url", "STRING"),
+        ]
+        usgs_table_ref = f"{dataset_ref}.usgs_water_observations"
+        usgs_table = bigquery.Table(usgs_table_ref, schema=water_context_schema)
+        client.create_table(usgs_table, exists_ok=True)
+        print(f"✓ Table {usgs_table_ref} ready.")
 
         print("\nAll Google Cloud BigQuery GIS tables successfully initialized!")
 
