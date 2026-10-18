@@ -561,6 +561,7 @@ class AquaVigilHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
+        logger.info(f"Incoming GET request path={path} query={parsed.query}")
 
         # 1. Root HTML View
         if path in ("/", "/index.html"):
@@ -660,7 +661,8 @@ class AquaVigilHandler(BaseHTTPRequestHandler):
             return
 
         # 6c. Live WQP Environmental Baseline API
-        if path == "/api/wqp/live-quality":
+        # Accept both exact and trailing-slash variants
+        if path.startswith("/api/wqp/live-quality"):
             query = parse_qs(parsed.query)
             bbox = (query.get("bbox", ["-74.05,40.70,-73.95,40.80"])[0] or "-74.05,40.70,-73.95,40.80").strip()
             characteristic = (query.get("characteristic", ["Turbidity"])[0] or "Turbidity").strip()
@@ -707,9 +709,10 @@ class AquaVigilHandler(BaseHTTPRequestHandler):
                         return
             except Exception as e:
                 logger.warning(f"OSM live fetch failed: {e}")
+
             self.send_json({
-                "status": "ERROR",
-                "message": "Live municipal corridor data unavailable; no fallback municipal vectors are used."
+                "status": "NO_DATA",
+                "message": "No live corridor data is available for this location."
             })
             return
 

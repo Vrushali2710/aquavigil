@@ -14,6 +14,8 @@ const SECTOR_CENTER = [12.9720, 77.5945];
 const SECTOR_ZOOM = 17;
 
 document.addEventListener("DOMContentLoaded", () => {
+  applyTheme('dark');
+  switchDashboardTab('ingestion');
   initMap();
   loadNetworkTopology();
   loadUsgsWaterContext();
@@ -31,7 +33,38 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   setInterval(loadUsgsWaterContext, 60000);
   setInterval(loadWqpQualityContext, 60000);
+
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      const nextTheme = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
+      applyTheme(nextTheme);
+    });
+  }
 });
+
+function applyTheme(theme) {
+  const isDark = theme === 'dark';
+  document.body.classList.toggle('theme-dark', isDark);
+  document.body.classList.toggle('theme-light', !isDark);
+
+  const toggle = document.getElementById('theme-toggle');
+  if (toggle) {
+    const icon = toggle.querySelector('i');
+    const label = toggle.querySelector('span');
+    if (icon) {
+      icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+      if (window.lucide) lucide.createIcons();
+    }
+    if (label) label.textContent = isDark ? 'Light mode' : 'Dark mode';
+    toggle.classList.toggle('bg-sky-100', !isDark);
+    toggle.classList.toggle('border-sky-200', !isDark);
+    toggle.classList.toggle('text-sky-700', !isDark);
+    toggle.classList.toggle('bg-slate-800', isDark);
+    toggle.classList.toggle('border-slate-700', isDark);
+    toggle.classList.toggle('text-slate-100', isDark);
+  }
+}
 
 function addNotification({ title, message, level = 'info', duration = 6000 }) {
   const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -81,6 +114,33 @@ function dismissAllNotifications() {
 let currentUserSession = null;
 let authMode = 'login';
 let authRole = 'citizen';
+
+function getStoredUsers() {
+  try {
+    const saved = localStorage.getItem('aquavigil-users');
+    return saved ? JSON.parse(saved) : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveStoredUsers(users) {
+  try {
+    localStorage.setItem('aquavigil-users', JSON.stringify(users));
+  } catch (err) {
+    console.warn('Unable to persist local user list.', err);
+  }
+}
+
+function findStoredUser(email, password, role) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const normalizedPassword = String(password || '').trim();
+  if (!normalizedEmail || !normalizedPassword) return null;
+
+  return getStoredUsers().find((user) => {
+    return user.email && user.email.toLowerCase() === normalizedEmail && user.password === normalizedPassword && user.role === role;
+  }) || null;
+}
 
 function openAuthModal() {
   const modal = document.getElementById('auth-modal');
@@ -224,16 +284,17 @@ function logoutCurrentUser() {
 function applyRoleBasedUI(user) {
   const civicRole = user?.role || 'guest';
   const isMunicipal = civicRole === 'municipal';
+  const isCitizen = civicRole === 'citizen';
 
   const municipalPanel = document.getElementById('municipal-only-panel');
   const citizenPanel = document.getElementById('citizen-only-panel');
   const roleBanner = document.getElementById('role-banner');
 
   if (municipalPanel) municipalPanel.classList.toggle('hidden', !isMunicipal);
-  if (citizenPanel) citizenPanel.classList.toggle('hidden', isMunicipal);
+  if (citizenPanel) citizenPanel.classList.toggle('hidden', !isCitizen);
   if (roleBanner) {
-    roleBanner.classList.toggle('hidden', !isMunicipal);
-    roleBanner.textContent = isMunicipal ? 'Municipal operator console active' : 'Citizen portal active';
+    roleBanner.classList.toggle('hidden', !isMunicipal && !isCitizen);
+    roleBanner.textContent = isMunicipal ? 'Municipal operator console active' : isCitizen ? 'Citizen portal active' : 'Please log in to access role-based panels';
   }
 
   const municipalBtns = [
@@ -306,25 +367,78 @@ async function handleAuthSubmit(event) {
     return;
   }
 
-  const endpoint = authMode === 'signup' ? '/api/auth/signup' : authMode === 'reset' ? '/api/auth/reset-password' : '/api/auth/login';
+  if (authMode === 'signup') {
+    const existing = getStoredUsers().find((user) => user.email && user.email.toLowerCase() === payload.email.trim().toLowerCase() && user.role === authRole);
+    if (existing) {
+      showAuthMessage('That account already exists. Please log in with the existing email and password.', 'error');
+      setAuthMode('login');
+      return;
+    }
+
+    const nextUsers = [...getStoredUsers(), { ...payload, email: payload.email.trim().toLowerCase() }];
+    saveStoredUsers(nextUsers);
+    showAuthMessage('Account created successfully. Please log in with your email and password to continue.', 'success');
+    addNotification({
+      title: 'Account created',
+      message: `${payload.full_name} can now log in as a ${payload.role} user.`,
+      level: 'success',
+      duration: 6000
+    });
+    setAuthMode('login');
+    const form = document.getElementById('auth-form');
+    if (form) form.reset();
+    return;
+  }
+
+  const endpoint = authMode === 'reset' ? '/api/auth/reset-password' : '/api/auth/login';
   const resetPayload = authMode === 'reset' ? { email, role: authRole, new_password: password } : payload;
+
+  if (authMode === 'reset') {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(resetPayload)
+      });
+      const data = await res.json();
+      if (!res.ok || data.status === 'ERROR') {
+        showAuthMessage(data.error || 'Password reset failed.', 'error');
+        return;
+      }
+      showAuthMessage('Password reset successful. You can now login with your new password.', 'success');
+      setAuthMode('login');
+      document.getElementById('auth-password').value = '';
+      return;
+    } catch (err) {
+      showAuthMessage('Could not reach the authentication service. Please try again shortly.', 'error');
+      return;
+    }
+  }
+
+  const localUser = findStoredUser(email, password, authRole);
+  if (localUser) {
+    currentUserSession = localUser;
+    renderLoggedInState(localUser);
+    closeAuthModal();
+    showAuthMessage('Login successful.', 'success');
+    addNotification({
+      title: 'Login successful',
+      message: `${localUser.full_name} is now active as a ${localUser.role} user.`,
+      level: 'success',
+      duration: 6000
+    });
+    return;
+  }
 
   try {
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(authMode === 'reset' ? resetPayload : payload)
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
     if (!res.ok || data.status === 'ERROR') {
-      showAuthMessage(data.error || 'Authentication failed.', 'error');
-      return;
-    }
-
-    if (authMode === 'reset') {
-      showAuthMessage('Password reset successful. You can now login with your new password.', 'success');
-      setAuthMode('login');
-      document.getElementById('auth-password').value = '';
+      showAuthMessage(data.error || 'Authentication failed. Please create an account or try a different email/password.', 'error');
       return;
     }
 
@@ -332,9 +446,9 @@ async function handleAuthSubmit(event) {
     currentUserSession = user;
     renderLoggedInState(user);
     closeAuthModal();
-    showAuthMessage(authMode === 'signup' ? 'Account created successfully.' : 'Login successful.', 'success');
+    showAuthMessage('Login successful.', 'success');
     addNotification({
-      title: authMode === 'signup' ? 'Account created' : 'Login successful',
+      title: 'Login successful',
       message: `${user.full_name} is now active as a ${user.role} user.`,
       level: 'success',
       duration: 6000
@@ -398,10 +512,10 @@ async function loadUsgsWaterContext() {
       const unit = data.unit || 'ft3/s';
       const value = Number(data.value ?? 0).toFixed(1);
       if (summaryEl) {
-        summaryEl.textContent = `${data.site_name || ''}: ${value} ${unit} live streamflow`;
+        summaryEl.textContent = `${data.site_name || data.site_code || 'USGS station'}: ${value} ${unit} live streamflow`;
         summaryEl.className = 'ml-1 text-emerald-300';
       }
-      if (siteEl) siteEl.textContent = data.site_code || '';
+      if (siteEl) siteEl.textContent = data.site_name || data.site_code || 'USGS station';
       if (streamEl) streamEl.textContent = `${value} ${unit}`;
       if (paramEl) paramEl.textContent = data.parameter_code || '';
       if (tsEl) tsEl.textContent = data.timestamp ? new Date(data.timestamp).toLocaleString() : '';
@@ -442,6 +556,16 @@ async function loadWqpQualityContext() {
     const characteristicEl = document.getElementById('wqp-characteristic');
     const timestampEl = document.getElementById('wqp-timestamp');
     const statusEl = document.getElementById('wqp-feed-status');
+    const clearErrorState = (fallbackMessage = 'WQP data unavailable') => {
+      if (stationEl) stationEl.textContent = '—';
+      if (turbidityEl) turbidityEl.textContent = fallbackMessage;
+      if (characteristicEl) characteristicEl.textContent = 'Turbidity';
+      if (timestampEl) timestampEl.textContent = 'n/a';
+      if (statusEl) {
+        statusEl.textContent = 'ERROR';
+        statusEl.className = 'rounded-full border border-red-800 bg-red-950/40 px-2 py-0.5 text-[9px] font-bold text-red-300';
+      }
+    };
 
     if (data.status === 'SUCCESS' && data.value !== null && data.value !== undefined) {
       const value = Number(data.value ?? 0).toFixed(2);
@@ -457,28 +581,27 @@ async function loadWqpQualityContext() {
       return;
     }
 
-    if (stationEl) stationEl.textContent = '';
-    if (turbidityEl) turbidityEl.textContent = '';
-    if (characteristicEl) characteristicEl.textContent = '';
-    if (timestampEl) timestampEl.textContent = '';
-    if (statusEl) {
-      statusEl.textContent = '';
-      statusEl.className = 'rounded-full border border-slate-700 bg-slate-950/40 px-2 py-0.5 text-[9px] font-bold text-slate-400';
+    if (data && data.message) {
+      clearErrorState(data.message);
+      return;
     }
+
+    clearErrorState();
   } catch (err) {
     const stationEl = document.getElementById('wqp-station-id');
     const turbidityEl = document.getElementById('wqp-turbidity');
     const characteristicEl = document.getElementById('wqp-characteristic');
     const timestampEl = document.getElementById('wqp-timestamp');
     const statusEl = document.getElementById('wqp-feed-status');
+    const message = err && err.message ? err.message : 'Could not reach the WQP service.';
 
-    if (stationEl) stationEl.textContent = '';
-    if (turbidityEl) turbidityEl.textContent = '';
-    if (characteristicEl) characteristicEl.textContent = '';
-    if (timestampEl) timestampEl.textContent = '';
+    if (stationEl) stationEl.textContent = '—';
+    if (turbidityEl) turbidityEl.textContent = message;
+    if (characteristicEl) characteristicEl.textContent = 'Turbidity';
+    if (timestampEl) timestampEl.textContent = 'n/a';
     if (statusEl) {
-      statusEl.textContent = '';
-      statusEl.className = 'rounded-full border border-slate-700 bg-slate-950/40 px-2 py-0.5 text-[9px] font-bold text-slate-400';
+      statusEl.textContent = 'ERROR';
+      statusEl.className = 'rounded-full border border-red-800 bg-red-950/40 px-2 py-0.5 text-[9px] font-bold text-red-300';
     }
   }
 }
@@ -567,12 +690,44 @@ function initMap() {
       `);
     }
   }).addTo(map);
+
+  // Resize map to fit available viewport space
+  function resizeMapToViewport() {
+    try {
+      const header = document.querySelector('header');
+      const rect = mapElement.getBoundingClientRect();
+      const topOffset = (header ? header.getBoundingClientRect().bottom : rect.top) || 0;
+      const available = window.innerHeight - topOffset - 40; // 40px bottom padding
+      const heightPx = Math.max(360, Math.floor(available));
+      mapElement.style.height = `${heightPx}px`;
+      if (map) {
+        map.invalidateSize();
+      }
+    } catch (e) {
+      console.error('resizeMapToViewport error', e);
+    }
+  }
+
+  // Initial resize and bind to window changes
+  resizeMapToViewport();
+  if (map && typeof map.whenReady === 'function') {
+    map.whenReady(() => {
+      setTimeout(() => resizeMapToViewport(), 120);
+    });
+  }
+  window.addEventListener('resize', () => {
+    resizeMapToViewport();
+  });
+  // Expose for other UI actions that show/hide panels
+  window.resizeMapToViewport = resizeMapToViewport;
 }
 
 // Fit Map
 function fitMapBounds() {
   if (map) {
     map.setView(SECTOR_CENTER, SECTOR_ZOOM);
+    // ensure map sizing correct after programmatic pan/zoom
+    try { map.invalidateSize(); } catch (e) { }
   }
 }
 
@@ -1020,12 +1175,13 @@ function selectPreset(preset) {
   const previewImg = document.getElementById('filter-preview-img');
   if (previewImg) {
     previewImg.removeAttribute('src');
-    previewImg.alt = 'Awaiting live image upload';
+    previewImg.alt = 'No image uploaded';
+    previewImg.classList.add('hidden');
   }
 
   const badge = document.getElementById('active-image-source');
   if (badge) {
-    badge.textContent = 'Awaiting live upload';
+    badge.textContent = 'No image uploaded';
   }
 }
 
@@ -1041,7 +1197,10 @@ function handleFileUpload(e) {
   const reader = new FileReader();
   reader.onload = (event) => {
     const previewImg = document.getElementById('filter-preview-img');
-    if (previewImg) previewImg.src = event.target.result;
+    if (previewImg) {
+      previewImg.src = event.target.result;
+      previewImg.classList.remove('hidden');
+    }
   };
   reader.readAsDataURL(file);
 
@@ -1258,6 +1417,58 @@ function switchModalTab(tabName) {
   });
 }
 
+function switchDashboardTab(tabName) {
+  ['ingestion', 'risk', 'forensics'].forEach((tab) => {
+    const button = document.getElementById(`dashboard-tab-${tab}`);
+    const panel = document.getElementById(`dashboard-panel-${tab}`);
+
+    if (button) {
+      const isActive = tab === tabName;
+      button.classList.toggle('bg-sky-600', isActive);
+      button.classList.toggle('text-white', isActive);
+      button.classList.toggle('border-sky-500', isActive);
+      button.classList.toggle('bg-slate-950', !isActive);
+      button.classList.toggle('text-slate-300', !isActive);
+      button.classList.toggle('border-slate-800', !isActive);
+    }
+
+    if (panel) {
+      panel.classList.toggle('hidden', tab !== tabName);
+    }
+  });
+
+  const leftColumn = document.getElementById('dashboard-left-column');
+  const sideColumn = document.getElementById('dashboard-side-column');
+  const mainGrid = document.querySelector('main');
+  const isForensicsView = tabName === 'forensics';
+  const isSideVisible = tabName === 'forensics' || tabName === 'risk';
+
+  if (mainGrid) {
+    mainGrid.classList.toggle('lg:grid-cols-1', !isSideVisible);
+    mainGrid.classList.toggle('lg:grid-cols-12', isSideVisible);
+  }
+
+  if (leftColumn) {
+    leftColumn.classList.toggle('lg:col-span-12', !isSideVisible);
+    leftColumn.classList.toggle('lg:col-span-7', isSideVisible);
+    leftColumn.style.width = !isSideVisible ? '100%' : '';
+    leftColumn.style.maxWidth = !isSideVisible ? '100%' : '';
+  }
+
+  if (sideColumn) {
+    sideColumn.classList.toggle('hidden', !isSideVisible);
+    sideColumn.classList.toggle('lg:block', isSideVisible);
+    sideColumn.style.display = isSideVisible ? '' : 'none';
+  }
+  // After switching panels, ensure map is resized when it's visible
+  setTimeout(() => {
+    try {
+      if (window.resizeMapToViewport) window.resizeMapToViewport();
+      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+    } catch (e) { console.error('Error resizing map after tab switch', e); }
+  }, 150);
+}
+
 // ==================== LIVE DATA INTEGRATIONS ====================
 
 let liveCameraStream = null;
@@ -1388,7 +1599,12 @@ async function toggleLiveCamera() {
     btnCam.innerHTML = `<i data-lucide="x" class="w-3 h-3"></i><span>Close Cam</span>`;
     lucide.createIcons();
   } catch (err) {
-    alert("Camera access notice: " + (err.message || "Please allow webcam permission to capture live filter photo."));
+    addNotification({
+      title: 'Camera unavailable',
+      message: err?.message || 'Please allow webcam permission to capture a live filter photo.',
+      level: 'warning',
+      duration: 6000
+    });
   }
 }
 
@@ -1408,6 +1624,7 @@ async function snapLivePhoto() {
 
     const img = document.getElementById('filter-preview-img');
     img.src = canvas.toDataURL('image/jpeg');
+    img.classList.remove('hidden');
 
     toggleLiveCamera();
     await executeFilterAnalysis();
@@ -1417,7 +1634,12 @@ async function snapLivePhoto() {
 // 3. Live GPS & Real OpenStreetMap Corridors
 function useLiveGpsCorridor() {
   if (!navigator.geolocation) {
-    alert("Geolocation is not supported by your browser.");
+    addNotification({
+      title: 'Location not supported',
+      message: 'Geolocation is not available in this browser.',
+      level: 'warning',
+      duration: 6000
+    });
     return;
   }
 
@@ -1446,9 +1668,17 @@ function useLiveGpsCorridor() {
         if (corrLabel) corrLabel.textContent = `${Math.max(120, data.features.length * 26)} m`;
         addNotification({
           title: 'OSM corridor added',
-          message: `OpenStreetMap baseline loaded for ${lat.toFixed(4)}, ${lon.toFixed(4)}.`,
+          message: data.message || `OpenStreetMap baseline loaded for ${lat.toFixed(4)}, ${lon.toFixed(4)}.`,
           level: 'info',
           duration: 7000
+        });
+      } else {
+        const msg = data.message || 'No data available for this location.';
+        addNotification({
+          title: 'No data available',
+          message: msg,
+          level: 'warning',
+          duration: 8000
         });
       }
 
@@ -1465,9 +1695,20 @@ function useLiveGpsCorridor() {
         if (elevationEl) elevationEl.textContent = 'Baseline unavailable';
       }
 
-      alert(`✓ Loaded live OpenStreetMap corridors around your location (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+      addNotification({
+        title: 'Location mapped',
+        message: `Live OpenStreetMap corridors loaded around ${lat.toFixed(4)}, ${lon.toFixed(4)}.`,
+        level: 'success',
+        duration: 6000
+      });
     } catch (e) {
       console.warn("Could not load OSM corridors:", e);
+      addNotification({
+        title: 'Corridor update failed',
+        message: 'The live network corridor could not be loaded. Please try again.',
+        level: 'danger',
+        duration: 6000
+      });
     } finally {
       if (btn) {
         btn.innerHTML = `<i data-lucide="crosshair" class="w-3 h-3"></i><span>Live GPS</span>`;
@@ -1475,7 +1716,12 @@ function useLiveGpsCorridor() {
       }
     }
   }, (err) => {
-    alert("Location notice: " + (err.message || "Could not retrieve live GPS location."));
+    addNotification({
+      title: 'Location unavailable',
+      message: err?.message || 'Could not retrieve your live GPS location.',
+      level: 'warning',
+      duration: 6000
+    });
     if (btn) {
       btn.innerHTML = `<i data-lucide="crosshair" class="w-3 h-3"></i><span>Live GPS</span>`;
       lucide.createIcons();
