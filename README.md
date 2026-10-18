@@ -78,7 +78,7 @@ Over **1.3 billion people worldwide** receive domestic water through **Intermitt
    *(Or double-click `start.bat` on Windows)*
 4. Open your browser and navigate to:
    ```
-   http://127.0.0.1:8080
+   http://127.0.0.1:8081
    ```
 
 ---
@@ -126,3 +126,55 @@ The application features a built-in interactive demo banner at the top of the in
 | **Cloud Pub/Sub** | Real-time event ingestion for SCADA valve and pump state changes |
 | **Cloud Run** | Containerized FastAPI dual-persona web application |
 | **Cloud Storage (GCS)** | Object storage for crowdsourced filter photographs and GeoJSON maps |
+
+---
+
+## 🌍 GRACE / Earth Engine Integration
+
+This project uses the Google Earth Engine (EE) Python API to compute GRACE LWE (land water equivalent) aggregates and to create map tiles. To avoid exposing EE tokens to clients, the server uses a tile proxy (`/api/ee/tile-proxy`) which fetches tiles server-side and streams them to the frontend.
+
+Key server endpoints related to EE and GRACE:
+- `GET /api/grace/timeseries?lat=<>&lon=<>` — returns LWE timeseries for the supplied point (buffering applied server-side).
+- `GET /api/grace/heatmap?bbox=minLon,minLat,maxLon,maxLat` — returns a GeoJSON heatmap grid.
+- `GET /api/ee/tile-proxy?min=&max=&palette=&z={z}&x={x}&y={y}` — returns EE tile bytes proxied by server.
+- `GET /api/groundwater-alert?lat=<>&lon=<>` — computes baseline vs recent LWE means and returns an alert level.
+
+## Earth Engine Authentication (recommended: service account)
+
+1. Create a Google Cloud service account (SA) and download its JSON key.
+2. Grant the SA appropriate IAM roles for any GCP services you use (BigQuery, Storage, Pub/Sub as needed).
+3. IMPORTANT: Register the SA email as an Earth Engine user. An Earth Engine administrator must add the SA email via the Earth Engine user management console — otherwise EE calls will receive authorization errors.
+4. Place the SA JSON in the repo (e.g., `credentials.json`) or set `GOOGLE_APPLICATION_CREDENTIALS` to its path. The server will auto-detect common filenames.
+
+Local interactive EE authentication (developer only):
+```bash
+pip install earthengine-api
+earthengine authenticate
+```
+
+Server initialization behavior (in `main.py`):
+- The server first attempts `ee.Initialize()` with default ADC (Application Default Credentials).
+- If that fails and `CREDENTIALS_FILE` + `SERVICE_ACCOUNT_EMAIL` are set, it will try `ee.ServiceAccountCredentials` + `ee.Initialize(creds, {'project': ...})`.
+
+## Testing & Troubleshooting
+
+- Confirm dependencies are installed:
+   ```bash
+   pip install -r requirements.txt
+   pip show earthengine-api
+   ```
+- To test GRACE alert for a lat/lon:
+   ```bash
+   curl -i "http://127.0.0.1:8081/api/groundwater-alert?lat=22.5052&lon=73.4678&recent_months=12&threshold_pct=20"
+   ```
+- If you get EE authorization errors, verify:
+   - `GOOGLE_APPLICATION_CREDENTIALS` points to the SA JSON, and
+   - The SA email is registered as an Earth Engine user.
+
+## Next steps I can help with
+- Add a `cloudbuild.yaml` and `Dockerfile` for Cloud Run deployment.
+- Automate Earth Engine mapid caching to reduce repeated `getMapId` calls.
+- Add richer alerting rules and notification hooks (email/SMS/webhook).
+
+---
+If you'd like, I can now add a short `deploy/` scaffold (Dockerfile + Cloud Run instructions) or run dependency installs here and verify `ee` imports. Which would you prefer? 
